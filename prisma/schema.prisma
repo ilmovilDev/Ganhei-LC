@@ -1,0 +1,86 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Day {
+  id          String   @id @default(cuid())
+  clerkId     String
+
+  date        DateTime
+  hours       Decimal  @db.Decimal(5, 2)
+  kilometers  Decimal  @db.Decimal(8, 2)
+
+  earnings    Earning[]
+  expenses    Expense[]
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([clerkId, date])
+  @@index([clerkId, date])
+}
+
+model Earning {
+  id        String   @id @default(cuid())
+  dayId     String
+  day       Day      @relation(fields: [dayId], references: [id], onDelete: Cascade)
+
+  app       AppName
+  amount    Decimal  @db.Decimal(10, 2)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([dayId, app])
+  @@index([dayId, app])
+}
+
+model Expense {
+  id          String   @id @default(cuid())
+
+  dayId       String
+  day         Day      @relation(fields: [dayId], references: [id], onDelete: Cascade)
+
+  category    ExpenseCategory
+  amount      Decimal  @db.Decimal(10, 2)
+  description String?
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([dayId])
+  @@index([category])
+}
+
+enum AppName {
+  UBER
+  INDRIVER
+  NINE_NINE
+  NINE_NINE_FOOD
+  IFOOD
+  DELIVERY
+  SHOPEE
+  OTHER
+}
+
+enum ExpenseCategory {
+  FUEL
+  FOOD
+  MAINTENANCE
+  MARKET
+  TOLLS
+  PARKING
+  OTHER
+}
+
