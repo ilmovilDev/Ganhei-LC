@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
+import { ClerkProvider } from "@clerk/nextjs";
 import { Inter, Montserrat } from "next/font/google";
-import { cn } from "@/lib/utils";
 import { Toaster } from "@/components/ui/sonner";
+import { cn } from "@/lib/utils";
 
 import "./globals.css";
 
@@ -22,19 +23,21 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html
-      lang="pt-BR"
-      className={cn(
-        "font-sans",
-        // "dark",
-        inter.variable,
-        montserratHeading.variable,
-      )}
-    >
-      <body>
-        {children}
-        <Toaster />
-      </body>
-    </html>
+    <ClerkProvider>
+      <html
+        lang="pt-BR"
+        className={cn(
+          "font-sans",
+          // "dark",
+          inter.variable,
+          montserratHeading.variable,
+        )}
+      >
+        <body>
+          {children}
+          <Toaster />
+        </body>
+      </html>
+    </ClerkProvider>
   );
 }
