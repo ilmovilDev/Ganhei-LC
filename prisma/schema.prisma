@@ -36,7 +36,7 @@ model Earning {
   dayId     String
   day       Day      @relation(fields: [dayId], references: [id], onDelete: Cascade)
 
-  app       AppName
+  app       App
   amount    Decimal  @db.Decimal(10, 2)
 
   createdAt DateTime @default(now())
@@ -63,7 +63,7 @@ model Expense {
   @@index([category])
 }
 
-enum AppName {
+enum App {
   UBER
   INDRIVER
   NINE_NINE
