@@ -2,26 +2,19 @@
 
 import { auth } from "@clerk/nextjs/server";
 import { earningService } from "../services/earning-service";
-import { getDayByIdSchema } from "../schemas/earning-schema";
-import { getZodErrorMessage } from "@/app/lib/zod/error";
+import { handleError } from "@/app/lib/errors/handle-error";
+import { AppError } from "@/components/shared/errors/app-errors";
 
-export async function getDayByIdAction(input: unknown) {
-  const { userId } = await auth();
-
-  if (!userId) {
-    throw new Error("Não autorizado");
-  }
-
-  const parsed = getDayByIdSchema.safeParse(input);
-
-  if (!parsed.success) {
-    throw new Error(getZodErrorMessage(parsed.error));
-  }
-
+export async function getDayByIdAction(dayId: string) {
   try {
-    return await earningService.getDayById(userId, parsed.data.dayId);
+    const { userId } = await auth();
+
+    if (!userId) {
+      throw new AppError("UNAUTHORIZED", "Não autorizado");
+    }
+
+    return await earningService.getDayById(userId, dayId);
   } catch (error) {
-    console.error("getDayByIdAction", error);
-    throw new Error("Erro ao buscar dia");
+    handleError(error);
   }
 }

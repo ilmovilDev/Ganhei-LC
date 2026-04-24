@@ -1,45 +1,27 @@
 "use server";
 
 import { auth } from "@clerk/nextjs/server";
-import { earningService } from "../services/earning-service";
 import { getEarningsSchema } from "../schemas/earning-schema";
-import { GetEarningsResponse } from "../types/earning-type";
+import { earningService } from "../services/earning-service";
+import { handleError } from "@/app/lib/errors/handle-error";
+import { AppError } from "@/components/shared/errors/app-errors";
 
-/**
- * 🎯 GET EARNINGS ACTION
- */
-export async function getEarningsAction(
-  input: unknown,
-): Promise<GetEarningsResponse> {
-  /**
-   * 🔐 AUTH
-   */
-  const { userId } = await auth();
-
-  if (!userId) {
-    throw new Error("Não autorizado");
-  }
-
-  /**
-   * 🧪 VALIDACIÓN ZOD
-   */
-  const parsed = getEarningsSchema.safeParse(input);
-
-  if (!parsed.success) {
-    throw new Error(parsed.error.issues[0]?.message || "Invalid input");
-  }
-
-  const { month } = parsed.data;
-
-  /**
-   * 🚀 SERVICE
-   */
+export async function getEarningsAction(input: unknown) {
   try {
-    const data = await earningService.getEarnings(userId, month);
+    const { userId } = await auth();
 
-    return data;
+    if (!userId) {
+      throw new AppError("UNAUTHORIZED", "Não autorizado");
+    }
+
+    const parsed = getEarningsSchema.safeParse(input);
+
+    if (!parsed.success) {
+      throw parsed.error;
+    }
+
+    return await earningService.getEarnings(userId, parsed.data.month);
   } catch (error) {
-    console.error("getEarningsAction error:", error);
-    throw new Error("Erro ao buscar ganhos");
+    handleError(error);
   }
 }
