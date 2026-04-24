@@ -2,14 +2,14 @@ import { App } from "@/generated/prisma/enums";
 import { z } from "zod";
 
 /**
- * 🔥 FIX: enum compatível com Prisma
+ * 🔥 Enum seguro
  */
 export const appEnum = z.nativeEnum(App, {
   message: "Aplicativo inválido",
 });
 
 /**
- * 💰 Valor monetário robusto (suporta string de input)
+ * 💰 Amount robusto (input seguro desde form)
  */
 export const amountSchema = z
   .union([z.string(), z.number()])
@@ -25,7 +25,7 @@ export const amountSchema = z
   });
 
 /**
- * 📅 Data com transformação real
+ * 📅 Date normalizada
  */
 export const dateSchema = z
   .string()
@@ -48,19 +48,18 @@ export const earningItemSchema = z.object({
  */
 export const createEarningSchema = z.object({
   date: dateSchema,
-  earnings: z
-    .array(earningItemSchema)
-    .min(1, "Adicione pelo menos um ganho")
-    .max(10, "Máximo de 10 registros por dia"),
-});
 
-/**
- * 🔄 UPDATE (mais seguro)
- */
-export const updateEarningSchema = z.object({
-  id: z.string().min(1, "ID do registro é obrigatório"),
-  app: appEnum,
-  amount: amountSchema,
+  hours: z
+    .number({ message: "Horas são obrigatórias" })
+    .min(0, "Horas inválidas")
+    .max(24, "Máximo de 24 horas"),
+
+  kilometers: z
+    .number({ message: "KM são obrigatórios" })
+    .min(0, "KM inválidos")
+    .max(1000, "Valor muito alto"),
+
+  earnings: z.array(earningItemSchema).min(1, "Adicione pelo menos um ganho"),
 });
 
 /**
@@ -71,14 +70,14 @@ export const deleteEarningSchema = z.object({
 });
 
 /**
- * 🔍 FILTROS
+ * 🔍 FILTRO
  */
 export const getEarningsSchema = z.object({
   month: z.string().regex(/^(0[1-9]|1[0-2])$/, "Mês inválido (01-12)"),
 });
 
 /**
- * 🔎 GET DAY
+ * 🔎 DAY
  */
 export const getDayByIdSchema = z.object({
   dayId: z.string().min(1, "ID do dia é obrigatório"),
