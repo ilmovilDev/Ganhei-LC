@@ -1,11 +1,24 @@
-import UnderConstruction from "@/components/shared/under-construction";
-import { requireUser } from "@/app/lib/auth/require-user";
+import { normalizeMonth } from "@/lib/helpers/date";
+import { requireUserOrRedirect } from "@/lib/auth/require-user-or-redirect";
+import HeaderSection from "@/components/schared/headers/header-section";
+import TimeSelect from "@/components/schared/select/time-select";
 
-export default async function ExpensesPage() {
-  await requireUser();
+export default async function ExpensePage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ month: string }>;
+}) {
+  await requireUserOrRedirect();
+  const params = await searchParams;
+  const month = normalizeMonth(params?.month);
   return (
-    <div>
-      <UnderConstruction showBack={true} />
+    <div className="flex h-full flex-col overflow-hidden">
+      {/* HEADER */}
+      <HeaderSection
+        title="Ganhos"
+        description="Controle das suas receitas"
+        rightSlot={<TimeSelect month={month} />}
+      />
     </div>
   );
 }

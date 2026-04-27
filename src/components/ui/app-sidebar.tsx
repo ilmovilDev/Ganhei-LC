@@ -31,11 +31,6 @@ const menuItems = [
     url: "/expenses",
     icon: CreditCard,
   },
-  {
-    title: "Assinatura",
-    url: "/subscription",
-    icon: CreditCard,
-  },
 ];
 
 export function AppSidebar() {
@@ -54,7 +49,6 @@ export function AppSidebar() {
       <SidebarContent>
         <SidebarGroup>
           <SidebarGroupLabel>Menu</SidebarGroupLabel>
-
           <SidebarMenu className="space-y-1">
             {menuItems.map((item) => {
               const Icon = item.icon;

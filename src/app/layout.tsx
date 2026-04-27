@@ -1,10 +1,12 @@
+import React from "react";
 import type { Metadata } from "next";
 import { ClerkProvider } from "@clerk/nextjs";
 import { Inter, Montserrat } from "next/font/google";
 import { Toaster } from "@/components/ui/sonner";
-import { cn } from "@/lib/utils";
+import { cn } from "@/lib/helpers/utils";
 
 import "./globals.css";
+import { ReactQueryProvider } from "@/providers/react-query.provider";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
 const montserratHeading = Montserrat({
@@ -34,8 +36,10 @@ export default function RootLayout({
         )}
       >
         <body>
-          {children}
-          <Toaster />
+          <ReactQueryProvider>
+            {children}
+            <Toaster />
+          </ReactQueryProvider>
         </body>
       </html>
     </ClerkProvider>
