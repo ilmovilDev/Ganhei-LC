@@ -10,7 +10,7 @@ export default function Header() {
   const username = user?.firstName ?? "Convidado";
 
   return (
-    <header className="bg-background flex h-16 items-center justify-between border-b p-4">
+    <header className="bg-background flex h-16 items-center justify-between p-4">
       {/* LEFT */}
       <div className="flex items-center gap-3">
         <SidebarTrigger />

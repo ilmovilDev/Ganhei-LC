@@ -121,7 +121,7 @@ export default function TimeSelect({ month }: TimeSelectProps) {
     <Select value={currentMonth} onValueChange={handleChange}>
       <SelectTrigger
         className={cn(
-          "flex h-10 w-fit",
+          "flex h-10 w-full md:w-fit",
           "bg-background border px-2 shadow-sm",
           isPending && "opacity-70",
         )}

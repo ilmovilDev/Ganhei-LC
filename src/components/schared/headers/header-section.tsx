@@ -8,17 +8,8 @@ import { cn } from "@/lib/utils";
 interface HeaderSectionProps {
   title: string;
   description?: string;
-
-  /**
-   * Slot derecho (actions, filtros, selects, etc)
-   */
   rightSlot?: ReactNode;
-
-  /**
-   * Slot izquierdo extra (iconos, badges, etc)
-   */
   leftSlot?: ReactNode;
-
   className?: string;
 }
 
@@ -33,23 +24,43 @@ export default function HeaderSection({
 }: HeaderSectionProps) {
   return (
     <header
-      className={cn("flex items-center justify-between px-4 py-2", className)}
+      className={cn(
+        // Mobile: columna
+        // Desktop: fila con separación
+        "flex flex-col gap-3 px-4 py-3 md:flex-row md:items-center md:justify-between",
+        className,
+      )}
     >
-      {/* LEFT */}
-      <div className="flex items-center gap-3">
+      {/* LEFT BLOCK */}
+      <div className="flex flex-col gap-2 md:flex-row md:items-center md:gap-3">
         {leftSlot && <div className="flex items-center">{leftSlot}</div>}
 
         <div className="flex flex-col">
-          <h2 className="text-md font-semibold tracking-tight">{title}</h2>
+          <h2 className="text-base font-semibold tracking-tight md:text-lg">
+            {title}
+          </h2>
 
           {description && (
-            <p className="text-muted-foreground text-xs">{description}</p>
+            <p className="text-muted-foreground text-xs md:text-sm">
+              {description}
+            </p>
           )}
         </div>
       </div>
 
-      {/* RIGHT */}
-      {rightSlot && <div className="flex items-center gap-2">{rightSlot}</div>}
+      {/* RIGHT BLOCK */}
+      {rightSlot && (
+        <div
+          className={cn(
+            // Mobile: ocupa ancho completo
+            "flex w-full items-center justify-start",
+            // Desktop: tamaño natural alineado a la derecha
+            "md:w-auto md:justify-end",
+          )}
+        >
+          {rightSlot}
+        </div>
+      )}
     </header>
   );
 }
