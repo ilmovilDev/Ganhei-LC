@@ -19,7 +19,6 @@ interface MetricsGridProps {
 export default function MetricsGrid({ month }: MetricsGridProps) {
   const { data, isLoading } = useDashboard(month);
 
-  // 🔥 evita duplicación
   const metrics = [
     {
       title: "Ganhos líquidos",
@@ -27,7 +26,7 @@ export default function MetricsGrid({ month }: MetricsGridProps) {
       description: "Após deduções",
       icon: <Wallet />,
       color: "green" as const,
-      span: "col-span-2 md:col-span-1",
+      span: "sm:col-span-2 lg:col-span-1",
     },
     {
       title: "Ganhos brutos",
@@ -52,7 +51,7 @@ export default function MetricsGrid({ month }: MetricsGridProps) {
     },
     {
       title: "Km percorridos",
-      value: formatCurrency(data?.km ?? 0),
+      value: `${data?.km ?? 0} km`,
       description: "Quilometragem do mês",
       icon: <Car />,
       color: "blue" as const,
@@ -60,19 +59,14 @@ export default function MetricsGrid({ month }: MetricsGridProps) {
   ];
 
   return (
-    <div className="grid [grid-template-columns:repeat(auto-fit,minmax(190px,1fr))] gap-4">
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
       {isLoading
-        ? // 🔥 skeletons consistentes
-          metrics.map((_, index) => (
-            <div
-              key={index}
-              className={index === 0 ? "col-span-2 md:col-span-1" : ""}
-            >
+        ? metrics.map((metric, index) => (
+            <div key={index} className={metric.span}>
               <MetricCardSkeleton />
             </div>
           ))
-        : // ✅ data real
-          metrics.map((metric, index) => (
+        : metrics.map((metric, index) => (
             <div key={index} className={metric.span}>
               <MetricCard {...metric} />
             </div>
