@@ -31,7 +31,6 @@ import { FormAlert } from "@/components/schared/form/form-alert";
 import { useUpsertEarningForm } from "../../hooks/use-upsert-day-form";
 import { UpsertEarningsDialogProps } from "@/modules/interfaces/dialog/upsert-earning-dialog.props";
 import { toast } from "sonner";
-import { ClientError } from "@/modules/interfaces/errors/client-error";
 
 export default function UpsertEarningsDialog({
   isOpen,
@@ -39,7 +38,6 @@ export default function UpsertEarningsDialog({
   dayId,
 }: UpsertEarningsDialogProps) {
   const mode = dayId ? "update" : "create";
-  console.log("Upsert dialog", mode);
 
   const {
     form,
@@ -73,17 +71,19 @@ export default function UpsertEarningsDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogContent className="space-y-6">
+      <DialogContent>
         {/* HEADER */}
         <DialogHeader>
           <DialogTitle>
-            {mode === "update" ? "Atualizar receita" : "Lançar receita"}
+            {mode === "update"
+              ? "Editar receita do dia"
+              : "Registrar receita do dia"}
           </DialogTitle>
 
           <DialogDescription>
             {mode === "update"
-              ? "Edite os dados do seu dia"
-              : "Registre suas receitas do dia"}
+              ? "Atualize valores, aplicativos e detalhes deste dia."
+              : "Adicione os ganhos do dia para acompanhar seu desempenho."}
           </DialogDescription>
         </DialogHeader>
 

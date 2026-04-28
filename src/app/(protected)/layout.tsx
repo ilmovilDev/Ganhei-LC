@@ -1,7 +1,7 @@
 import React from "react";
 import { AppSidebar } from "@/components/ui/app-sidebar";
 import { SidebarProvider } from "@/components/ui/sidebar";
-import Header from "@/components/schared/headers/header";
+import Header from "@/components/schared/header/header";
 
 export default function DashboardLayout({
   children,

@@ -134,7 +134,7 @@ export default function TimeSelect({ month }: TimeSelectProps) {
         </div>
       </SelectTrigger>
 
-      <SelectContent>
+      <SelectContent position="popper">
         {MONTH_OPTIONS.map((m) => (
           <SelectItem key={m.value} value={m.value}>
             {m.label}
