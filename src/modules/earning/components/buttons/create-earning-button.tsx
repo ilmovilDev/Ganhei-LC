@@ -19,7 +19,7 @@ export default function CreateEarningButton({
         aria-label={
           userCanRegisterDay ? "Adicionar receita" : "Limite do plano atingido"
         }
-        className="size-9 md:h-10 md:w-auto md:gap-2 md:px-3"
+        className="size-10 h-10 md:w-auto md:gap-2 md:px-3"
       >
         <PlusIcon />
 

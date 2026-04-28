@@ -134,7 +134,10 @@ export default function TimeSelect({ month }: TimeSelectProps) {
         </div>
       </SelectTrigger>
 
-      <SelectContent position="popper">
+      <SelectContent
+        position="popper"
+        className="w-[--radix-select-trigger-width]"
+      >
         {MONTH_OPTIONS.map((m) => (
           <SelectItem key={m.value} value={m.value}>
             {m.label}

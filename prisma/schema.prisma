@@ -22,6 +22,7 @@ model Day {
   kilometers  Int
 
   earnings    Earning[]
+  expenses    Expense[]
 
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
@@ -48,6 +49,23 @@ model Earning {
   @@unique([dayId, app])
 }
 
+model Expense {
+  id        String   @id @default(cuid())
+
+  dayId     String
+  type      ExpenseType
+  amount    Decimal  @db.Decimal(10, 2)
+  note      String?  @db.VarChar(255)
+
+  day       Day      @relation(fields: [dayId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([dayId])
+  @@index([type])
+}
+
 enum App {
   UBER
   INDRIVER
@@ -59,7 +77,7 @@ enum App {
   OTHER
 }
 
-enum ExpenseCategory {
+enum ExpenseType {
   FUEL
   FOOD
   MAINTENANCE
