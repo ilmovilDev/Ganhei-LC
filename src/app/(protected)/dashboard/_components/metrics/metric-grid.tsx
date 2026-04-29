@@ -23,43 +23,48 @@ export default function MetricsGrid({ month }: MetricsGridProps) {
     {
       title: "Ganhos líquidos",
       value: formatCurrency(data?.net ?? 0),
-      description: "Após deduções",
+      description: "Após custos",
       icon: <Wallet />,
       color: "green" as const,
-      span: "sm:col-span-2 lg:col-span-1",
+      span: "col-span-2 lg:col-span-3",
+      size: "highlight" as const,
     },
     {
       title: "Ganhos brutos",
       value: formatCurrency(data?.gross ?? 0),
-      description: "Antes das deduções",
+      description: "Sem descontos",
       icon: <DollarSign />,
       color: "gray" as const,
+      span: "lg:col-span-3",
     },
     {
-      title: "Ganho por hora",
+      title: "Por hora",
       value: formatCurrency(data?.perHour ?? 0),
       description: "Média por hora",
       icon: <Clock />,
       color: "purple" as const,
+      span: "lg:col-span-2",
     },
     {
-      title: "Total gastos",
+      title: "Despesas",
       value: formatCurrency(data?.expenses ?? 0),
-      description: "Total de despesas",
+      description: "Custos totais",
       icon: <Receipt />,
       color: "red" as const,
+      span: "lg:col-span-2",
     },
     {
-      title: "Km percorridos",
+      title: "Quilometragem",
       value: `${data?.km ?? 0} km`,
-      description: "Quilometragem do mês",
+      description: "Distância rodada",
       icon: <Car />,
       color: "blue" as const,
+      span: "lg:col-span-2",
     },
   ];
 
   return (
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+    <div className="grid grid-cols-2 gap-4 lg:grid-cols-6">
       {isLoading
         ? metrics.map((metric, index) => (
             <div key={index} className={metric.span}>

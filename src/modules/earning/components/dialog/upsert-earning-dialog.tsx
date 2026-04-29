@@ -7,18 +7,23 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { CalendarIcon } from "lucide-react";
+
 import { Apps } from "@/constants/apps";
+
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Input } from "@/components/ui/input";
+
 import {
   Select,
   SelectContent,
@@ -26,11 +31,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+
 import { CurrencyInput } from "@/components/schared/inputs/currency-input";
 import { FormAlert } from "@/components/schared/form/form-alert";
+
 import { useUpsertEarningForm } from "../../hooks/use-upsert-day-form";
 import { UpsertEarningsDialogProps } from "@/modules/interfaces/dialog/upsert-earning-dialog.props";
+
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
+
+// ---------------------------------------------
 
 export default function UpsertEarningsDialog({
   isOpen,
@@ -53,8 +64,8 @@ export default function UpsertEarningsDialog({
     onSuccess: () => {
       toast.success(
         mode === "update"
-          ? "Receita atualizada com sucesso"
-          : "Receita registrada com sucesso",
+          ? "Ganhos atualizados com sucesso"
+          : "Ganhos registrados com sucesso",
       );
 
       setIsOpen(false);
@@ -71,192 +82,209 @@ export default function UpsertEarningsDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogContent>
+      <DialogContent
+        className={cn(
+          "w-full max-w-lg",
+          "p-4 md:p-6", // 🔥 padding responsive
+          "gap-0", // control manual de spacing
+        )}
+      >
         {/* HEADER */}
-        <DialogHeader>
-          <DialogTitle>
-            {mode === "update"
-              ? "Editar receita do dia"
-              : "Registrar receita do dia"}
+        <DialogHeader className="space-y-2">
+          <DialogTitle className="text-lg md:text-xl">
+            {mode === "update" ? "Editar ganhos" : "Registrar ganhos"}
           </DialogTitle>
 
-          <DialogDescription>
+          <DialogDescription className="text-sm leading-relaxed">
             {mode === "update"
-              ? "Atualize valores, aplicativos e detalhes deste dia."
-              : "Adicione os ganhos do dia para acompanhar seu desempenho."}
+              ? "Atualize valores e aplicativos deste dia."
+              : "Adicione seus ganhos para acompanhar seu desempenho."}
           </DialogDescription>
         </DialogHeader>
 
-        {/* TOTAL */}
-        <div className="bg-muted/40 rounded-xl border p-4">
-          <p className="text-muted-foreground text-xs">Total do dia</p>
-          <p className="text-2xl font-semibold text-green-600">
-            R$ {total.toFixed(2)}
-          </p>
-        </div>
+        {/* CONTENT WRAPPER */}
+        <div className="mt-4 flex flex-col gap-6">
+          {/* TOTAL */}
+          <div className="bg-muted/40 rounded-xl border p-4 md:p-5">
+            <p className="text-muted-foreground text-xs">Total</p>
 
-        {/* FORM */}
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {/* DATA */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Data</label>
+            <p className="text-2xl font-semibold text-green-600 md:text-3xl">
+              R$ {total.toFixed(2)}
+            </p>
+          </div>
 
-            <Popover>
-              <PopoverTrigger asChild>
+          {/* FORM */}
+          <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+            {/* DATA */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Data</label>
+
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    type="button"
+                    className="h-10 w-full justify-between"
+                  >
+                    {isValidDate
+                      ? format(date, "PPP", { locale: ptBR })
+                      : "Selecionar data"}
+
+                    <CalendarIcon className="h-4 w-4 opacity-70" />
+                  </Button>
+                </PopoverTrigger>
+
+                <PopoverContent className="w-auto p-0">
+                  <Calendar
+                    mode="single"
+                    locale={ptBR}
+                    selected={date}
+                    onSelect={(value) =>
+                      value &&
+                      form.setValue("date", value, {
+                        shouldValidate: true,
+                      })
+                    }
+                    disabled={(d) => d > new Date()}
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+
+            {/* GRID */}
+            <div className="grid grid-cols-2 gap-3 md:gap-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Horas</label>
+
+                <Input
+                  className="h-10"
+                  type="number"
+                  placeholder="Ex: 8"
+                  {...form.register("hours", {
+                    valueAsNumber: true,
+                  })}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Quilometragem</label>
+
+                <Input
+                  className="h-10"
+                  type="number"
+                  placeholder="Ex: 120"
+                  {...form.register("kilometers", {
+                    valueAsNumber: true,
+                  })}
+                />
+              </div>
+            </div>
+
+            {/* APPS */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-medium">Aplicativos</label>
+
                 <Button
+                  type="button"
+                  size="sm"
                   variant="outline"
-                  type="button"
-                  className="w-full justify-between"
+                  onClick={() => append({ name: "", amount: 0 })}
                 >
-                  {isValidDate
-                    ? format(date, "PPP", { locale: ptBR })
-                    : "Selecionar data"}
-
-                  <CalendarIcon className="h-4 w-4 opacity-70" />
-                </Button>
-              </PopoverTrigger>
-
-              <PopoverContent className="w-auto p-0">
-                <Calendar
-                  mode="single"
-                  locale={ptBR}
-                  selected={date}
-                  onSelect={(value) =>
-                    value &&
-                    form.setValue("date", value, {
-                      shouldValidate: true,
-                    })
-                  }
-                  disabled={(d) => d > new Date()}
-                />
-              </PopoverContent>
-            </Popover>
-          </div>
-
-          {/* GRID */}
-          <div className="grid grid-cols-2 gap-4">
-            {/* HOURS */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Horas trabalhadas</label>
-
-              <Input
-                type="number"
-                placeholder="Ex: 8"
-                {...form.register("hours", {
-                  valueAsNumber: true,
-                })}
-              />
-            </div>
-
-            {/* KM */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Quilômetros</label>
-
-              <Input
-                type="number"
-                placeholder="Ex: 120"
-                {...form.register("kilometers", {
-                  valueAsNumber: true,
-                })}
-              />
-            </div>
-          </div>
-
-          {/* APPS */}
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <label className="text-sm font-medium">Aplicativos</label>
-
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                onClick={() => append({ name: "", amount: 0 })}
-              >
-                + Adicionar
-              </Button>
-            </div>
-
-            {/* EMPTY STATE */}
-            {fields.length === 0 && (
-              <div className="text-muted-foreground rounded-lg border border-dashed p-6 text-center text-sm">
-                Nenhum aplicativo adicionado ainda.
-                <br />
-                Clique em <strong>Adicionar</strong> para começar.
-              </div>
-            )}
-
-            {/* LIST */}
-            {fields.map((field, index) => (
-              <div key={field.id} className="flex items-center gap-2">
-                <Select
-                  value={apps[index]?.name || ""}
-                  onValueChange={(value) =>
-                    form.setValue(`apps.${index}.name`, value, {
-                      shouldValidate: true,
-                    })
-                  }
-                >
-                  <SelectTrigger className="w-40">
-                    <SelectValue placeholder="App" />
-                  </SelectTrigger>
-
-                  <SelectContent>
-                    {Apps.map((app) => {
-                      const isSelected = selectedApps.includes(app.value);
-
-                      const isCurrent = apps[index]?.name === app.value;
-
-                      return (
-                        <SelectItem
-                          key={app.value}
-                          value={app.value}
-                          disabled={isSelected && !isCurrent}
-                        >
-                          {app.label}
-                        </SelectItem>
-                      );
-                    })}
-                  </SelectContent>
-                </Select>
-
-                <CurrencyInput
-                  value={apps[index]?.amount || 0}
-                  onChange={(val) =>
-                    form.setValue(`apps.${index}.amount`, val, {
-                      shouldValidate: true,
-                    })
-                  }
-                />
-
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => remove(index)}
-                >
-                  ✕
+                  + Adicionar app
                 </Button>
               </div>
-            ))}
-          </div>
 
-          {/* ERROR */}
-          <FormAlert message={form.formState.errors.root?.message} />
+              {/* EMPTY */}
+              {fields.length === 0 && (
+                <div className="text-muted-foreground rounded-lg border border-dashed p-4 text-center text-sm">
+                  Nenhum aplicativo adicionado.
+                  <br />
+                  Adicione um app para registrar ganhos.
+                </div>
+              )}
 
-          {/* SUBMIT */}
-          <Button
-            type="submit"
-            disabled={!form.formState.isValid || isPending}
-            className="w-full"
-          >
-            {isPending
-              ? "Salvando..."
-              : mode === "update"
-                ? `Atualizar • R$ ${total.toFixed(2)}`
-                : `Salvar • R$ ${total.toFixed(2)}`}
-          </Button>
-        </form>
+              {/* LIST */}
+              <div className="flex flex-col gap-2">
+                {fields.map((field, index) => (
+                  <div
+                    key={field.id}
+                    className="flex items-center gap-2 md:gap-3"
+                  >
+                    <Select
+                      value={apps[index]?.name || ""}
+                      onValueChange={(value) =>
+                        form.setValue(`apps.${index}.name`, value, {
+                          shouldValidate: true,
+                        })
+                      }
+                    >
+                      <SelectTrigger className="h-10 w-[130px] md:w-[150px]">
+                        <SelectValue placeholder="Selecionar app" />
+                      </SelectTrigger>
+
+                      <SelectContent>
+                        {Apps.map((app) => {
+                          const isSelected = selectedApps.includes(app.value);
+                          const isCurrent = apps[index]?.name === app.value;
+
+                          return (
+                            <SelectItem
+                              key={app.value}
+                              value={app.value}
+                              disabled={isSelected && !isCurrent}
+                            >
+                              {app.label}
+                            </SelectItem>
+                          );
+                        })}
+                      </SelectContent>
+                    </Select>
+
+                    <div className="min-w-0 flex-1">
+                      <CurrencyInput
+                        value={apps[index]?.amount || 0}
+                        onChange={(val) =>
+                          form.setValue(`apps.${index}.amount`, val, {
+                            shouldValidate: true,
+                          })
+                        }
+                      />
+                    </div>
+
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      aria-label="Remover aplicativo"
+                      className="shrink-0"
+                      onClick={() => remove(index)}
+                    >
+                      ✕
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* ERROR */}
+            <FormAlert message={form.formState.errors.root?.message} />
+
+            {/* SUBMIT */}
+            <Button
+              type="submit"
+              size="lg"
+              disabled={!form.formState.isValid || isPending}
+              className="mt-2 h-11 w-full"
+            >
+              {isPending
+                ? "Salvando..."
+                : mode === "update"
+                  ? `Atualizar ganhos • R$ ${total.toFixed(2)}`
+                  : `Salvar ganhos • R$ ${total.toFixed(2)}`}
+            </Button>
+          </form>
+        </div>
       </DialogContent>
     </Dialog>
   );
