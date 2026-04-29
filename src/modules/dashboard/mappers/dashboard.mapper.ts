@@ -9,5 +9,6 @@ export function mapDashboardToMetrics(raw: DashboardRaw): DashboardMetrics {
     expenses: raw.totalExpenses,
     perHour,
     km: raw.totalKm,
+    hasData: raw.daysCount > 0,
   };
 }

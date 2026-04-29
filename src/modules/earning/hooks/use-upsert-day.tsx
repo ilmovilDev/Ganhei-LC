@@ -1,34 +1,58 @@
+"use client";
+
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+
 import { upsertDayAction } from "../actions/upsert-day.action";
-import { UpsertDayMutationInput } from "../types/day/day-mutation.type";
+import { dashboardKeys, dayKeys } from "@/modules/earning/constants/query-keys";
+
+// ---------------------------------------------
+
+type Context = {
+  previousDays?: unknown;
+};
+
+// ---------------------------------------------
 
 export function useUpsertDay() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ dayId, data }: UpsertDayMutationInput) => {
-      return await upsertDayAction({
-        dayId,
-        data,
-      });
-    },
+    mutationFn: upsertDayAction,
 
+    // ---------------------------------------------
+    // OPTIMISTIC (controlado)
+    // ---------------------------------------------
     onMutate: async () => {
-      await queryClient.cancelQueries({ queryKey: ["days"] });
+      await queryClient.cancelQueries({
+        queryKey: dayKeys.all,
+      });
 
-      const previousDays = queryClient.getQueryData(["days"]);
+      const previousDays = queryClient.getQueryData(dayKeys.all);
 
-      return { previousDays };
+      return { previousDays } as Context;
     },
 
     onError: (_err, _vars, ctx) => {
       if (ctx?.previousDays) {
-        queryClient.setQueryData(["days"], ctx.previousDays);
+        queryClient.setQueryData(dayKeys.all, ctx.previousDays);
       }
     },
 
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ["days"] });
+    // ---------------------------------------------
+    // SINCRONIZACIÓN FINAL
+    // ---------------------------------------------
+    onSuccess: () => {
+      // 🔥 invalidate DAYS
+      queryClient.invalidateQueries({
+        queryKey: dayKeys.all,
+        exact: false,
+      });
+
+      // 🔥 invalidate DASHBOARD (CRÍTICO)
+      queryClient.invalidateQueries({
+        queryKey: dashboardKeys.all,
+        exact: false,
+      });
     },
   });
 }

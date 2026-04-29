@@ -9,6 +9,7 @@ export interface DashboardRaw {
   totalNet: number; // neto
   totalHours: number;
   totalKm: number;
+  daysCount: number;
 }
 
 export interface DashboardMetrics {
@@ -17,4 +18,5 @@ export interface DashboardMetrics {
   expenses: number;
   perHour: number;
   km: number;
+  hasData: boolean;
 }

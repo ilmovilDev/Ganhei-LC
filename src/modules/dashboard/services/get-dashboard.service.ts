@@ -72,5 +72,6 @@ export async function getDashboardService({
     totalNet: totalEarnings - totalExpenses,
     totalHours,
     totalKm,
+    daysCount: days.length,
   };
 }

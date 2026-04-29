@@ -22,20 +22,39 @@ interface MetricCardProps {
 
 const sizeVariants = {
   default: {
-    title: "text-[11px] sm:text-xs",
-    value: "text-[clamp(0.9rem,2.5vw,1.25rem)]",
-    description: "text-[11px] sm:text-xs",
-    icon: "size-8 md:size-10",
+    // 🔹 Secondary information
+    description: "text-[0.7rem] sm:text-[0.75rem] text-muted-foreground",
+
+    // 🔹 Label
+    title: "text-[0.8rem] sm:text-[0.85rem] font-medium text-muted-foreground",
+
+    // 🔹 Primary value (protagonista)
+    value: "text-[clamp(1rem,2.2vw,1.2rem)] font-semibold tracking-tight",
+
+    // 🔹 Visual balance
+    icon: "size-8 md:size-9",
+
+    // 🔹 Internal rhythm
     gap: "gap-2",
   },
 
   highlight: {
-    // 🔥 Mobile grande → Desktop normal
-    title: "text-xs sm:text-sm md:text-xs",
+    // 🔸 Secondary info (ligeramente mayor pero no compite)
+    description:
+      "text-[0.75rem] sm:text-[0.8rem] md:text-[0.75rem] text-muted-foreground",
+
+    // 🔸 Label más visible en mobile
+    title:
+      "text-[0.9rem] sm:text-[1rem] md:text-[0.85rem] font-medium text-muted-foreground",
+
+    // 🔥 Valor protagonista real
     value:
-      "text-[clamp(1.2rem,3vw,1.75rem)] md:text-[clamp(0.9rem,2vw,1.25rem)]",
-    description: "text-xs sm:text-sm md:text-xs",
-    icon: "size-10 sm:size-11 md:size-10",
+      "text-[clamp(1.4rem,4vw,2rem)] md:text-[clamp(1rem,2.2vw,1.2rem)] font-semibold tracking-tight",
+
+    // 🔥 Icono acompaña jerarquía
+    icon: "size-10 sm:size-11 md:size-9",
+
+    // 🔥 Más aire en mobile
     gap: "gap-4 md:gap-2",
   },
 };
@@ -44,24 +63,38 @@ const sizeVariants = {
 
 const colorVariants = {
   green: {
-    bg: "bg-green-100",
-    text: "text-green-600",
+    // 💰 ganancias (positivo)
+    bg: "bg-emerald-500/10",
+    text: "text-emerald-600",
+    accent: "ring-emerald-500/20",
   },
-  blue: {
-    bg: "bg-blue-100",
-    text: "text-blue-600",
-  },
-  purple: {
-    bg: "bg-purple-100",
-    text: "text-purple-600",
-  },
+
   red: {
-    bg: "bg-red-100",
+    // 💸 gastos (negativo)
+    bg: "bg-red-500/10",
     text: "text-red-600",
+    accent: "ring-red-500/20",
   },
+
+  blue: {
+    // 🚗 actividad / distancia / info
+    bg: "bg-blue-500/10",
+    text: "text-blue-600",
+    accent: "ring-blue-500/20",
+  },
+
+  purple: {
+    // 📊 métricas derivadas (ej: por hora)
+    bg: "bg-violet-500/10",
+    text: "text-violet-600",
+    accent: "ring-violet-500/20",
+  },
+
   gray: {
+    // 📌 neutral / base
     bg: "bg-muted",
     text: "text-foreground",
+    accent: "ring-border",
   },
 };
 
@@ -81,9 +114,9 @@ export default function MetricCard({
 
   return (
     <Card className={cn("h-full transition hover:shadow-md", className)}>
-      <CardContent className="flex flex-col justify-between">
+      <CardContent className="px-4 md:px-6">
         {/* TOP */}
-        <div className={cn("flex items-start", sizeVariant.gap)}>
+        <div className={cn("flex items-center", sizeVariant.gap)}>
           {/* ICON */}
           <div
             className={cn(
@@ -96,7 +129,7 @@ export default function MetricCard({
           </div>
 
           {/* TEXT */}
-          <div className="flex min-w-0 flex-col">
+          <div className="flex min-w-0 flex-col leading-5">
             <span
               className={cn(
                 "text-muted-foreground truncate leading-tight wrap-break-word",

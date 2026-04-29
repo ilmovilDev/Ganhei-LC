@@ -12,8 +12,6 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { CalendarIcon } from "lucide-react";
 
-import { Apps } from "@/constants/apps";
-
 import {
   Popover,
   PopoverContent,
@@ -40,6 +38,7 @@ import { UpsertEarningsDialogProps } from "@/modules/interfaces/dialog/upsert-ea
 
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { Apps } from "../../constants/apps";
 
 // ---------------------------------------------
 
@@ -84,7 +83,6 @@ export default function UpsertEarningsDialog({
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogContent
         className={cn(
-          "w-full max-w-lg",
           "p-4 md:p-6", // 🔥 padding responsive
           "gap-0", // control manual de spacing
         )}
@@ -114,7 +112,7 @@ export default function UpsertEarningsDialog({
           </div>
 
           {/* FORM */}
-          <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+          <form onSubmit={handleSubmit} className="flex flex-col gap-y-4">
             {/* DATA */}
             <div className="space-y-2">
               <label className="text-sm font-medium">Data</label>
@@ -181,7 +179,7 @@ export default function UpsertEarningsDialog({
             </div>
 
             {/* APPS */}
-            <div className="space-y-3">
+            <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <label className="text-sm font-medium">Aplicativos</label>
 
@@ -219,7 +217,7 @@ export default function UpsertEarningsDialog({
                         })
                       }
                     >
-                      <SelectTrigger className="h-10 w-[130px] md:w-[150px]">
+                      <SelectTrigger className="h-10 w-32.5 md:w-37.5">
                         <SelectValue placeholder="Selecionar app" />
                       </SelectTrigger>
 
@@ -227,6 +225,7 @@ export default function UpsertEarningsDialog({
                         {Apps.map((app) => {
                           const isSelected = selectedApps.includes(app.value);
                           const isCurrent = apps[index]?.name === app.value;
+                          const Icon = app.icon;
 
                           return (
                             <SelectItem
@@ -234,7 +233,10 @@ export default function UpsertEarningsDialog({
                               value={app.value}
                               disabled={isSelected && !isCurrent}
                             >
-                              {app.label}
+                              <span className="text-muted-foreground">
+                                <Icon className="text-muted-foreground size-4" />
+                              </span>
+                              <span>{app.label}</span>
                             </SelectItem>
                           );
                         })}
