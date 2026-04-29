@@ -57,7 +57,7 @@ export default function MetricsGrid({ data }: MetricsGridProps) {
   ];
 
   return (
-    <div className="grid grid-cols-2 gap-4 p-4 lg:grid-cols-6 xl:grid-cols-5">
+    <div className="grid grid-cols-2 gap-4 px-4 py-2 lg:grid-cols-6 xl:grid-cols-5">
       {metrics.map((metric, index) => (
         <div key={index} className={metric.span}>
           <MetricCard {...metric} />

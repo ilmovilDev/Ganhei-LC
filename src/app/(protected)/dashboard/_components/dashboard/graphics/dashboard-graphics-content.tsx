@@ -14,7 +14,7 @@ import { BarChart3 } from "lucide-react";
 
 export default function DashboardGraphicsContent() {
   return (
-    <div className="grid grid-cols-1 gap-4 p-4 md:grid-cols-2">
+    <div className="grid grid-cols-1 gap-4 px-4 py-2 md:grid-cols-2">
       {/* CARD 1 */}
       <Card className="border-dashed">
         <CardHeader className="flex flex-col items-center text-center">
