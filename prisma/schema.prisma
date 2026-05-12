@@ -1,0 +1,82 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+//////////////////////////////////////////////////////
+// ENUMS
+//////////////////////////////////////////////////////
+enum App {
+  UBER
+  NINETY_NINE
+  INDRIVE
+  IFOOD
+  NINETY_NINE_FOOD
+  SHOPEE
+  GENERIC_DELIVERY
+  OTHER
+}
+
+enum ExpenseType {
+  FUEL
+  FOOD
+  MAINTENANCE
+  MARKET
+  TOLLS
+  PARKING
+  OTHER
+}
+
+//////////////////////////////////////////////////////
+// MODELS
+//////////////////////////////////////////////////////
+model Day {
+  id          String   @id @default(cuid())
+  clerkId     String
+  date        DateTime @db.Date
+  hours       Int
+  kilometers  Decimal  @db.Decimal(10, 2)
+  earnings    Earning[]
+  expenses    Expense[]
+  totalEarnings Decimal @db.Decimal(12, 2) @default(0)
+  totalExpenses Decimal @db.Decimal(12, 2) @default(0)
+  netProfit     Decimal @db.Decimal(12, 2) @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  @@index([clerkId])
+  @@index([date])
+  @@index([clerkId, date])
+  @@unique([clerkId, date])
+}
+
+model Earning {
+  id        String   @id @default(cuid())
+  dayId     String
+  day       Day      @relation(fields: [dayId], references: [id], onDelete: Cascade)
+  app       App
+  amount    Decimal  @db.Decimal(10, 2)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@index([dayId])
+  @@index([app])
+  @@index([dayId, app])
+  @@unique([dayId, app])
+}
+
+model Expense {
+  id        String   @id @default(cuid())
+  dayId     String
+  day       Day      @relation(fields: [dayId], references: [id], onDelete: Cascade)
+  type      ExpenseType
+  amount    Decimal  @db.Decimal(10, 2)
+  note      String?  @db.VarChar(255)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@index([dayId])
+  @@index([type])
+  @@index([dayId, type])
+}

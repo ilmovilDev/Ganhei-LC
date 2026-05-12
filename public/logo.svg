@@ -1,0 +1,23 @@
+<svg width="460" height="120" viewBox="0 0 460 120" xmlns="http://www.w3.org/2000/svg">
+  
+  <!-- Icono -->
+  <circle cx="60" cy="60" r="40" stroke="#1F1F23" stroke-width="8"/>
+  
+  <path d="M35 70 L50 55 L65 60 L85 40"
+        stroke="#22C55E"
+        stroke-width="4"
+        stroke-linecap="round"
+        stroke-linejoin="round"/>
+  
+  <circle cx="85" cy="40" r="4" fill="#22C55E"/>
+
+  <!-- Nombre principal -->
+  <text x="120" y="65"
+        fill="#1F1F23"
+        font-size="28"
+        font-family="Inter, Arial, sans-serif"
+        font-weight="600">
+    Ganhei LC
+  </text>
+
+</svg>
