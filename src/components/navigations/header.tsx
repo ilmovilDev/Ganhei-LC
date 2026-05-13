@@ -1,35 +1,25 @@
 "use client";
 
 import { UserButton } from "@clerk/nextjs";
-import { usePathname } from "next/navigation";
 import { SidebarTrigger } from "../ui/sidebar";
-import { routesConfig } from "@/config/navigations/routes.config";
-import { Heading } from "../typography/heading";
-
-//////////////
-/// Helper ///
-//////////////
-function getRouteByPath(pathname: string): string {
-  const route = routesConfig.find((route) => route.path === pathname);
-  return route?.label ?? "Dashboard";
-}
+import { UserGreeting } from "./header-page";
 
 export function Header() {
-  const pathname = usePathname();
-
-  const currentRouteLabel = getRouteByPath(pathname);
-
   return (
-    <header className="flex h-16 items-center justify-between border-b px-4 lg:px-6">
+    <header className="border-border/50 bg-background/80 sticky top-0 z-40 flex h-16 items-center justify-between border-b px-4 backdrop-blur-xl sm:h-18 lg:px-6">
       {/* Left */}
-      <div className="flex items-center gap-x-3">
-        <SidebarTrigger />
+      <div className="flex min-w-0 items-center gap-3">
+        <SidebarTrigger className="shrink-0" />
 
-        <Heading size="sm">{currentRouteLabel}</Heading>
+        <div className="hidden sm:block">
+          <UserGreeting />
+        </div>
       </div>
 
       {/* Right */}
-      <UserButton />
+      <div className="flex items-center gap-2">
+        <UserButton />
+      </div>
     </header>
   );
 }

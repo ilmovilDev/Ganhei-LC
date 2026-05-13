@@ -27,7 +27,7 @@ export default function RootLayout({
       lang="pt-BR"
       className={cn(
         "font-sans",
-        // "dark",
+        "dark",
         inter.variable,
         montserratHeading.variable,
       )}

@@ -14,6 +14,8 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import { routesConfig } from "@/config/navigations/routes.config";
+import { cn } from "@/lib/utils";
+import { Text } from "../typography/text";
 
 export function AppSidebar() {
   const pathname = usePathname();
@@ -50,8 +52,12 @@ export function AppSidebar() {
                 <SidebarMenuItem key={item.path}>
                   <SidebarMenuButton asChild isActive={isActive}>
                     <Link href={item.path}>
-                      <Icon className="size-4" />
-                      <span>{item.label}</span>
+                      <Icon
+                        className={cn("h-4 w-4", isActive && "text-primary")}
+                      />
+                      <span className={cn(isActive && "text-primary")}>
+                        {item.label}
+                      </span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>

@@ -4,10 +4,13 @@ import {
   Gem,
   LayoutDashboard,
   LucideIcon,
+  TrendingDown,
+  TrendingUp,
 } from "lucide-react";
 
 export interface RouteConfig {
   label: string;
+  description: string;
   path: string;
   icon: LucideIcon;
   showInNav?: boolean;
@@ -16,26 +19,23 @@ export interface RouteConfig {
 export const routesConfig: RouteConfig[] = [
   {
     label: "Dashboard",
+    description: "Visão geral dos seus ganhos e despesas",
     path: "/dashboard",
     icon: LayoutDashboard,
     showInNav: true,
   },
   {
     label: "Receitas",
+    description: "Controle seus ganhos nos aplicativos",
     path: "/earnings",
-    icon: Gem,
+    icon: TrendingUp,
     showInNav: true,
   },
   {
     label: "Despesas",
+    description: "Controle seus gastos e otimize seus lucros",
     path: "/expenses",
-    icon: CreditCard,
-    showInNav: true,
-  },
-  {
-    label: "Assinaturas",
-    path: "/subscriptions",
-    icon: Crown,
+    icon: TrendingDown,
     showInNav: true,
   },
 ];
