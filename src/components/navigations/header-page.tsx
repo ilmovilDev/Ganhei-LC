@@ -1,5 +1,6 @@
 "use client";
 
+import { ReactNode, Suspense } from "react";
 import { usePathname } from "next/navigation";
 import TimeSelect from "@/components/shared/time-select";
 import { Heading } from "@/components/typography/heading";
@@ -9,6 +10,7 @@ import { cn } from "@/lib/utils";
 
 interface Props {
   className?: string;
+  actions?: ReactNode;
 }
 
 function getCurrentRoute(pathname: string): RouteConfig {
@@ -22,7 +24,7 @@ function getCurrentRoute(pathname: string): RouteConfig {
   );
 }
 
-export function HeaderPage({ className }: Props) {
+export function HeaderPage({ className, actions }: Props) {
   const pathname = usePathname();
 
   const currentRoute = getCurrentRoute(pathname);
@@ -30,7 +32,7 @@ export function HeaderPage({ className }: Props) {
   return (
     <section
       className={cn(
-        "flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between",
+        "flex flex-row items-center justify-between gap-4",
         className,
       )}
     >
@@ -52,7 +54,15 @@ export function HeaderPage({ className }: Props) {
 
       {/* Right */}
       <div className="flex shrink-0 items-center gap-2">
-        <TimeSelect />
+        {/* Right */}
+        {actions && actions}
+        <Suspense
+          fallback={
+            <div className="bg-muted h-10 w-28 animate-pulse rounded-md" />
+          }
+        >
+          <TimeSelect />
+        </Suspense>
       </div>
     </section>
   );

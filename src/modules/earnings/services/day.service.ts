@@ -1,54 +1,60 @@
-import { AppError } from "@/lib/errors/app-error";
-import { ErrorCode } from "@/lib/errors/error-codes";
-import { DayFormData } from "../schemas";
 import { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/db/prisma";
-import { ok, fail, mapError } from "@/lib/errors/result";
-import { Result } from "@/types/result";
+import {
+  CreateDayInput,
+  CreateDayServiceOutput,
+  DeleteDayInput,
+  DeleteDayServiceOutput,
+  GetDaysByMonthInput,
+  GetDaysByMonthServiceOutput,
+  UpdateDayInput,
+  UpdateDayServiceOutput,
+} from "../types";
+import { ErrorCodes, fail, mapError, ok } from "@/lib/errors";
+import { dayDateToDatabase, monthRangeUTC } from "@/lib/date";
+import {
+  calculateDayTotals,
+  ensureDayOwnership,
+  mapDay,
+  replaceDayEarnings,
+} from "../helpers/services";
 
-type SuccessResult = Result<{ success: true }>;
+const DAY_SELECT = {
+  id: true,
+  date: true,
+  hours: true,
+  kilometers: true,
+  clerkId: true,
+  totalEarnings: true,
+  totalExpenses: true,
+  netProfit: true,
+  earnings: {
+    select: { id: true, app: true, amount: true },
+    orderBy: { createdAt: "asc" as const },
+  },
+} satisfies Prisma.DaySelect;
 
-type UpdateDayInput = Partial<DayFormData> & {
-  id: string;
-  clerkId: string;
-};
-
-async function recalculateTotals(dayId: string, tx: Prisma.TransactionClient) {
-  const [earningAgg, expenseAgg] = await Promise.all([
-    tx.earning.aggregate({ where: { dayId }, _sum: { amount: true } }),
-    tx.expense.aggregate({ where: { dayId }, _sum: { amount: true } }),
-  ]);
-
-  const totalEarnings = earningAgg._sum.amount ?? new Prisma.Decimal(0);
-  const totalExpenses = expenseAgg._sum.amount ?? new Prisma.Decimal(0);
-  const netProfit = totalEarnings.sub(totalExpenses);
-
-  return { totalEarnings, totalExpenses, netProfit };
-}
-
-export const dayService = {
-  async createDay(clerkId: string, data: DayFormData): Promise<SuccessResult> {
+export const DayService = {
+  async createDay({
+    clerkId,
+    data,
+  }: CreateDayInput): Promise<CreateDayServiceOutput> {
     try {
       await prisma.$transaction(async (tx) => {
         const day = await tx.day.create({
           data: {
             clerkId,
-            date: data.date,
+            date: dayDateToDatabase(data.date),
             hours: data.hours,
             kilometers: new Prisma.Decimal(data.kilometers),
           },
           select: { id: true },
         });
 
-        await tx.earning.createMany({
-          data: data.earnings.map((e) => ({
-            dayId: day.id,
-            app: e.app!,
-            amount: new Prisma.Decimal(e.amount),
-          })),
-        });
+        await replaceDayEarnings(tx, day.id, data.earnings);
 
-        const totals = await recalculateTotals(day.id, tx);
+        const totals = await calculateDayTotals(tx, day.id);
+
         await tx.day.update({ where: { id: day.id }, data: totals });
       });
 
@@ -59,7 +65,7 @@ export const dayService = {
         error.code === "P2002"
       ) {
         return fail({
-          code: ErrorCode.DAY_ALREADY_EXISTS,
+          code: ErrorCodes.DAY_ALREADY_EXISTS,
           status: 409,
           message: "Já existe um registro para esta data.",
         });
@@ -69,47 +75,27 @@ export const dayService = {
     }
   },
 
-  async updateDay(input: UpdateDayInput): Promise<SuccessResult> {
-    const { id, clerkId, ...data } = input;
-
+  async updateDay({
+    clerkId,
+    data,
+    id,
+  }: UpdateDayInput): Promise<UpdateDayServiceOutput> {
     try {
       await prisma.$transaction(async (tx) => {
-        const existing = await tx.day.findUnique({
-          where: { id },
-          select: { clerkId: true },
-        });
-
-        if (!existing || existing.clerkId !== clerkId) {
-          throw new AppError(
-            ErrorCode.DAY_NOT_FOUND,
-            404,
-            "Registro não encontrado.",
-          );
-        }
+        await ensureDayOwnership(tx, id, clerkId);
 
         await tx.day.update({
           where: { id },
           data: {
-            ...(data.date !== undefined && { date: data.date }),
-            ...(data.hours !== undefined && { hours: data.hours }),
-            ...(data.kilometers !== undefined && {
-              kilometers: new Prisma.Decimal(data.kilometers),
-            }),
+            hours: data.hours,
+            kilometers: new Prisma.Decimal(data.kilometers),
           },
         });
 
-        if (data.earnings !== undefined) {
-          await tx.earning.deleteMany({ where: { dayId: id } });
-          await tx.earning.createMany({
-            data: data.earnings.map((e) => ({
-              dayId: id,
-              app: e.app!,
-              amount: new Prisma.Decimal(e.amount),
-            })),
-          });
-        }
+        await replaceDayEarnings(tx, id, data.earnings);
 
-        const totals = await recalculateTotals(id, tx);
+        const totals = await calculateDayTotals(tx, id);
+
         await tx.day.update({ where: { id }, data: totals });
       });
 
@@ -119,21 +105,86 @@ export const dayService = {
     }
   },
 
-  async deleteDay(id: string, clerkId: string): Promise<SuccessResult> {
+  async deleteDay({
+    id,
+    clerkId,
+  }: DeleteDayInput): Promise<DeleteDayServiceOutput> {
     try {
-      const { count } = await prisma.day.deleteMany({
-        where: { id, clerkId },
+      await prisma.$transaction(async (tx) => {
+        await ensureDayOwnership(tx, id, clerkId);
+        await tx.day.delete({ where: { id } });
       });
 
-      if (count === 0) {
-        return fail({
-          code: ErrorCode.DAY_NOT_FOUND,
-          status: 404,
-          message: "Registro não encontrado.",
-        });
-      }
-
       return ok({ success: true });
+    } catch (error) {
+      return fail(mapError(error));
+    }
+  },
+
+  // ─────────────────────────────────────────────────────────────
+  // getDaysByMonth
+  //
+  // Executa 3 queries em paralelo (Promise.all) para eficiência:
+  //
+  //  1. findMany  → registros do mês, respeitando `limit` quando
+  //                 fornecido (primeiros 5 dias para carga inicial).
+  //                 Quando `limit` é undefined, traz tudo.
+  //
+  //  2. count     → total real de dias no mês, usado pelo frontend
+  //                 para saber se existe o botão "carregar mais".
+  //
+  //  3. aggregate → soma os campos financeiros/produtividade de
+  //                 TODOS os dias do mês, sem limite.
+  //                 Isso garante que os cards de resumo sempre
+  //                 mostram o mês completo, mesmo quando a tabela
+  //                 exibe só os primeiros 5 registros.
+  // ─────────────────────────────────────────────────────────────
+  async getDaysByMonth({
+    month,
+    year,
+    clerkId,
+    limit,
+  }: GetDaysByMonthInput): Promise<GetDaysByMonthServiceOutput> {
+    try {
+      const { from, to } = monthRangeUTC(year, month);
+      const where = { clerkId, date: { gte: from, lt: to } };
+
+      const [days, total, agg] = await Promise.all([
+        // 1. Registros paginados para a tabela
+        prisma.day.findMany({
+          where,
+          orderBy: { date: "desc" },
+          select: DAY_SELECT,
+          ...(limit ? { take: limit } : {}),
+        }),
+
+        // 2. Total real de dias no mês (para controle do botão)
+        prisma.day.count({ where }),
+
+        // 3. Agregados do mês completo (para os cards de resumo)
+        prisma.day.aggregate({
+          where,
+          _sum: {
+            totalEarnings: true,
+            totalExpenses: true,
+            netProfit: true,
+            hours: true,
+            kilometers: true,
+          },
+        }),
+      ]);
+
+      // Converte Decimal → number com fallback 0 para meses sem registros
+      const summary = {
+        grossProfit: Number(agg._sum.totalEarnings ?? 0),
+        totalExpenses: Number(agg._sum.totalExpenses ?? 0),
+        netProfit: Number(agg._sum.netProfit ?? 0),
+        totalHours: Number(agg._sum.hours ?? 0),
+        totalKm: Number(agg._sum.kilometers ?? 0),
+        totalDays: total,
+      };
+
+      return ok({ days: days.map(mapDay), total, summary });
     } catch (error) {
       return fail(mapError(error));
     }

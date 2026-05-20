@@ -7,7 +7,7 @@
  * Never use raw strings outside this enum — grep-ability and
  * refactor safety are the whole point.
  */
-export enum ErrorCode {
+export enum ErrorCodes {
   // ── Generic ────────────────────────────────────────────────────
   INTERNAL_ERROR = "INTERNAL_ERROR",
   VALIDATION_ERROR = "VALIDATION_ERROR",

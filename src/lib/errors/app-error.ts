@@ -1,13 +1,13 @@
-import { ErrorCode } from "@/lib/errors/error-codes";
 import { ResultError } from "@/types/result";
+import { ErrorCodes } from "./error-codes";
 
 export class AppError extends Error {
-  readonly code: ErrorCode;
+  readonly code: ErrorCodes;
   readonly status: number;
   readonly fieldErrors?: Record<string, string[]>;
 
   constructor(
-    code: ErrorCode,
+    code: ErrorCodes,
     status: number,
     message?: string,
     fieldErrors?: Record<string, string[]>,

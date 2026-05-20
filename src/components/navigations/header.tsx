@@ -2,7 +2,7 @@
 
 import { UserButton } from "@clerk/nextjs";
 import { SidebarTrigger } from "../ui/sidebar";
-import { UserGreeting } from "./header-page";
+import { UserGreeting } from "./user-greeting";
 
 export function Header() {
   return (

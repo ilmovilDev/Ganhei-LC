@@ -17,7 +17,7 @@ export default function ProtectedLayout({ children }: Props) {
 
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
           <Header />
-          <main className="flex min-h-0 w-full flex-1 flex-col p-4 lg:p-6">
+          <main className="flex min-h-0 w-full flex-1 flex-col p-4">
             {children}
           </main>
         </div>

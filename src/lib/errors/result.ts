@@ -1,6 +1,5 @@
-import { ErrorCode } from "@/lib/errors/error-codes";
-import { AppError } from "@/lib/errors/app-error";
 import { Result, ResultError } from "@/types/result";
+import { AppError, ErrorCodes } from ".";
 
 export function ok<T>(data: T): Result<T> {
   return { success: true, data };
@@ -16,7 +15,7 @@ export function mapError(error: unknown): ResultError {
   }
   console.error("[mapError] Unexpected error:", error);
   return {
-    code: ErrorCode.INTERNAL_ERROR,
+    code: ErrorCodes.INTERNAL_ERROR,
     status: 500,
     message: "Ocorreu um erro inesperado. Tente novamente.",
   };

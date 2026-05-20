@@ -1,7 +1,7 @@
-import { ErrorCode } from "@/lib/errors/error-codes";
+import { ErrorCodes } from "@/lib/errors";
 
 export type ResultError = {
-  code: ErrorCode;
+  code: ErrorCodes;
   status: number;
 
   // UI

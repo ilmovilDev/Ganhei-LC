@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { cn } from "@/lib/utils";
+import { PERIOD_LIMITS } from "@/tokens/month.token";
 
 const MONTHS_SHORT = [
   "Jan",
@@ -41,8 +42,7 @@ const MONTHS_FULL = [
 ];
 
 function buildYearRange() {
-  const cur = new Date().getFullYear();
-  return { min: cur - 2, max: cur };
+  return { min: PERIOD_LIMITS.YEAR.MIN, max: PERIOD_LIMITS.YEAR.MAX };
 }
 
 function normalizeMonth(v: string | null): number {

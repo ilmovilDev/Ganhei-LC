@@ -1,8 +1,8 @@
-import { z } from "zod";
 import { App } from "@/generated/prisma/enums";
 import { isTwoDecimalNumber } from "@/lib/utils/is-two-decimal-number";
+import { z } from "zod";
 
-const amountSchema = z
+const amount = z
   .number({
     message: "O valor deve ser um número.",
   })
@@ -13,19 +13,17 @@ const amountSchema = z
     message: "O valor não pode ter mais de 2 casas decimais.",
   });
 
-const appSchema = z
-  .nativeEnum(App, {
-    message: "Aplicativo inválido.",
-  })
-  .optional();
-
-export const EarningInputSchema = z.object({
-  app: appSchema,
-  amount: amountSchema,
+const app = z.nativeEnum(App, {
+  message: "Aplicativo inválido.",
 });
 
-export const EarningsArraySchema = z
-  .array(EarningInputSchema)
+export const EarningInput = z.object({
+  app,
+  amount,
+});
+
+export const EarningsArray = z
+  .array(EarningInput)
   .min(1, {
     message: "Informe pelo menos um aplicativo.",
   })
