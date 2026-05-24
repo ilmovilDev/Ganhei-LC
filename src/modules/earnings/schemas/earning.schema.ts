@@ -1,29 +1,33 @@
+import { z } from "zod";
 import { App } from "@/generated/prisma/enums";
 import { isTwoDecimalNumber } from "@/lib/utils/is-two-decimal-number";
-import { z } from "zod";
 
-const amount = z
+export const earningAmountSchema = z
   .number({
     message: "O valor deve ser um número.",
   })
   .positive({
     message: "O valor deve ser maior que zero.",
   })
+  .max(999999.99, {
+    message: "O valor informado é muito alto.",
+  })
   .refine(isTwoDecimalNumber, {
     message: "O valor não pode ter mais de 2 casas decimais.",
   });
 
-const app = z.nativeEnum(App, {
+export const earningAppSchema = z.nativeEnum(App, {
   message: "Aplicativo inválido.",
 });
 
-export const EarningInput = z.object({
-  app,
-  amount,
+export const earningInputSchema = z.object({
+  app: earningAppSchema,
+
+  amount: earningAmountSchema,
 });
 
-export const EarningsArray = z
-  .array(EarningInput)
+export const earningsArraySchema = z
+  .array(earningInputSchema)
   .min(1, {
     message: "Informe pelo menos um aplicativo.",
   })
@@ -31,22 +35,6 @@ export const EarningsArray = z
     const usedApps = new Set<App>();
 
     items.forEach((item, index) => {
-      /* ------------------------------------------------------------------ */
-      /* APP REQUIRED                                                        */
-      /* ------------------------------------------------------------------ */
-      if (!item.app) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: [index, "app"],
-          message: "Selecione um aplicativo.",
-        });
-
-        return;
-      }
-
-      /* ------------------------------------------------------------------ */
-      /* DUPLICATE APPS                                                      */
-      /* ------------------------------------------------------------------ */
       if (usedApps.has(item.app)) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
@@ -61,3 +49,7 @@ export const EarningsArray = z
       usedApps.add(item.app);
     });
   });
+
+export type EarningInputData = z.infer<typeof earningInputSchema>;
+
+export type EarningsArrayData = z.infer<typeof earningsArraySchema>;

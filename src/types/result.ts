@@ -1,14 +1,17 @@
-import { ErrorCodes } from "@/lib/errors";
+import { AppErrorCode } from "@/lib/errors/app-error-code";
 
-export type ResultError = {
-  code: ErrorCodes;
-  status: number;
-
-  // UI
-  message?: string;
-  fieldErrors?: Record<string, string[]>;
-};
+export interface ResultError {
+  message: string;
+}
 
 export type Result<T> =
-  | { success: true; data: T }
-  | { success: false; error: ResultError };
+  | {
+      success: true;
+      data: T;
+    }
+  | {
+      success: false;
+      error: ResultError;
+      code: AppErrorCode;
+      details?: unknown;
+    };

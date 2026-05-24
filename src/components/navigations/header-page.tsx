@@ -26,7 +26,6 @@ function getCurrentRoute(pathname: string): RouteConfig {
 
 export function HeaderPage({ className, actions }: Props) {
   const pathname = usePathname();
-
   const currentRoute = getCurrentRoute(pathname);
 
   return (
