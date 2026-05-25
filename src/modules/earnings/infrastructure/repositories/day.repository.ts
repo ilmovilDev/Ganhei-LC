@@ -27,7 +27,7 @@ export class DayRepository {
     });
   }
   async findById(id: string) {
-    return this.db.day.findUnique({
+    return this.db.day.findFirst({
       where: { id },
       select: daySelect,
     });
@@ -37,12 +37,10 @@ export class DayRepository {
     clerkId,
     startDate,
     endDate,
-    limit,
   }: {
     clerkId: string;
     startDate: Date;
     endDate: Date;
-    limit?: number;
   }) {
     return this.db.day.findMany({
       where: {
@@ -57,8 +55,6 @@ export class DayRepository {
       orderBy: {
         date: "desc",
       },
-
-      take: limit,
 
       select: daySelect,
     });

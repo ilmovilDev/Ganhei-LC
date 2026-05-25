@@ -30,15 +30,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { TableSkeleton } from "./days-table-skeleton";
 import { toast } from "sonner";
-import { deleteDayAction } from "@/modules/earnings/application/actions/delete-day.action";
 import { parseDayDate } from "@/lib/date";
 import { format } from "date-fns";
-import { useEarningsContext } from "../../providers/earning-provider";
 import UpsertDayDialog from "../form/upsert-day-dialog";
-
-/* -------------------------------------------------------------------------- */
+import { DaysTableSkeleton } from "./days-table-skeleton";
+import { useDeleteDay } from "../../hooks/use-delete-day";
 
 interface DaysTableProps {
   data: DayListItemDto[];
@@ -57,7 +54,7 @@ export default function DaysTable({ data, isLoading }: DaysTableProps) {
     },
   ]);
 
-  const { refetch } = useEarningsContext();
+  const deleteMutation = useDeleteDay();
 
   const handleEdit = useCallback((day: DayListItemDto) => {
     setEditDay(day);
@@ -71,23 +68,24 @@ export default function DaysTable({ data, isLoading }: DaysTableProps) {
   const handleDeleteConfirm = async () => {
     if (!deleteTarget) return;
     setIsDeleting(true);
+
     try {
-      const result = await deleteDayAction(deleteTarget.id);
+      const result = await deleteMutation.mutateAsync(deleteTarget.id);
+
       if (!result.success) {
-        toast.error(
-          result.error.message ?? "Falha ao excluir. Tente novamente.",
-        );
+        toast.error(result.error.message ?? "Falha ao excluir.");
+
         return;
       }
+
       toast.success("Registro excluído com sucesso.");
+
       setDeleteTarget(null);
-      await refetch();
     } catch {
-      toast.error("Erro inesperado. Tente novamente.");
-    } finally {
-      setIsDeleting(false);
+      toast.error("Erro inesperado.");
     }
   };
+
   const columns = useMemo(
     () =>
       buildColumnsDay({
@@ -117,7 +115,7 @@ export default function DaysTable({ data, isLoading }: DaysTableProps) {
     >
       {/* CONTENT */}
       {isLoading ? (
-        <TableSkeleton />
+        <DaysTableSkeleton />
       ) : (
         <div className="min-h-0 flex-1 overflow-auto">
           <Table className="min-w-245">

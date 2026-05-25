@@ -12,56 +12,41 @@ import {
 // Types
 // ─────────────────────────────────────────────
 
-interface EarningsContextValue {
+interface PeriodContextValue {
   month: number;
   year: number;
-  version: number;
-  refetch: () => void;
 }
 
 // ─────────────────────────────────────────────
 // Context
 // ─────────────────────────────────────────────
-const EarningsContext = createContext<EarningsContextValue | null>(null);
+
+const PeriodContext = createContext<PeriodContextValue | null>(null);
 
 // ─────────────────────────────────────────────
 // Provider
 // ─────────────────────────────────────────────
-interface EarningsProviderProps {
+
+interface PeriodProviderProps {
   month: number;
   year: number;
   children: React.ReactNode;
 }
 
-export function EarningsProvider({
-  month,
-  year,
-  children,
-}: EarningsProviderProps) {
-  const [version, setVersion] = useState(0);
-
-  const refetch = useCallback(() => {
-    setVersion((v) => v + 1);
-  }, []);
-
-  const value = useMemo(
-    () => ({ month, year, version, refetch }),
-    [month, year, version, refetch],
-  );
+export function PeriodProvider({ month, year, children }: PeriodProviderProps) {
+  const value = useMemo(() => ({ month, year }), [month, year]);
 
   return (
-    <EarningsContext.Provider value={value}>
-      {children}
-    </EarningsContext.Provider>
+    <PeriodContext.Provider value={value}>{children}</PeriodContext.Provider>
   );
 }
 
-export function useEarningsContext(): EarningsContextValue {
-  const ctx = useContext(EarningsContext);
+export function usePeriodContext(): PeriodContextValue {
+  const ctx = useContext(PeriodContext);
 
   if (!ctx) {
     throw new Error(
-      "useEarningsContext deve ser usado dentro de <EarningsProvider>",
+      "usePeriodContext deve ser usado dentro de <PeriodProvider>",
     );
   }
 

@@ -1,13 +1,10 @@
 "use server";
 
 import { auth } from "@clerk/nextjs/server";
-import { revalidateTag } from "next/cache";
 import { dayFormSchema } from "../../schemas/day.schema";
 import { mapError } from "@/lib/errors/map-error";
 import { CreateDayActionResult } from "../../types/results.types";
 import { CreateDayUseCase } from "../use-cases/create-day.use-case";
-
-const createDayUseCase = new CreateDayUseCase();
 
 export async function createDayAction(
   formData: unknown,
@@ -34,12 +31,11 @@ export async function createDayAction(
       };
     }
 
-    await createDayUseCase.execute({
+    const useCase = new CreateDayUseCase();
+    await useCase.execute({
       clerkId: userId,
       data: parsed.data,
     });
-
-    revalidateTag("earnings", "max");
 
     return {
       success: true,

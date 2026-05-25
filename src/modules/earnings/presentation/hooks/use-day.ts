@@ -1,46 +1,26 @@
 "use client";
 
-import { useCallback, useEffect, useState, useTransition } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { getDaysByMonthAction } from "../../application/actions/get-days-by-month.action";
-import { DayListItemDto } from "../../application/dtos/day-list-item.dto";
-import { useEarningsContext } from "../providers/earning-provider";
+import { earningsKeys } from "../lib/query-keys";
+import { usePeriodContext } from "@/providers/period-provider";
 
 export function useDays() {
-  const { month, year, version } = useEarningsContext();
+  const { month, year } = usePeriodContext();
+  return useQuery({
+    queryKey: earningsKeys.list(month, year),
 
-  const [days, setDays] = useState<DayListItemDto[]>([]);
-  const [error, setError] = useState<string | null>(null);
-
-  const [isPending, startTransition] = useTransition();
-
-  const fetchDays = useCallback(() => {
-    startTransition(async () => {
-      setError(null);
-
+    queryFn: async () => {
       const result = await getDaysByMonthAction({
         month,
         year,
       });
 
       if (!result.success) {
-        setError(result.error.message ?? "Erro ao carregar registros.");
-
-        return;
+        throw new Error(result.error.message ?? "Erro ao carregar registros");
       }
 
-      setDays(result.data);
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [month, year, version]);
-
-  useEffect(() => {
-    fetchDays();
-  }, [fetchDays]);
-
-  return {
-    days,
-    error,
-    isPending,
-    refresh: fetchDays,
-  };
+      return result.data;
+    },
+  });
 }

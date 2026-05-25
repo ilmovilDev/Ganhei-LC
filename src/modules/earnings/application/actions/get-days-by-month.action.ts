@@ -5,18 +5,14 @@ import { mapError } from "@/lib/errors/map-error";
 import { GetDaysByMonthActionResult } from "../../types/results.types";
 import { GetDaysByMonthUseCase } from "../use-cases/get-days-by-month.use-case";
 
-const getDaysByMonthUseCase = new GetDaysByMonthUseCase();
-
 interface Params {
   month: number;
   year: number;
-  limit?: number;
 }
 
 export async function getDaysByMonthAction({
   month,
   year,
-  limit,
 }: Params): Promise<GetDaysByMonthActionResult> {
   try {
     const { userId } = await auth();
@@ -29,11 +25,11 @@ export async function getDaysByMonthAction({
       };
     }
 
-    const data = await getDaysByMonthUseCase.execute({
+    const useCase = new GetDaysByMonthUseCase();
+    const data = await useCase.execute({
       clerkId: userId,
       month,
       year,
-      limit,
     });
 
     return {

@@ -1,13 +1,10 @@
 "use server";
 
 import { auth } from "@clerk/nextjs/server";
-import { revalidateTag } from "next/cache";
 import { dayFormSchema } from "../../schemas/day.schema";
 import { UpdateDayActionResult } from "../../types/results.types";
 import { UpdateDayUseCase } from "../use-cases/update-day.use-case";
 import { mapError } from "@/lib/errors/map-error";
-
-const updateDayUseCase = new UpdateDayUseCase();
 
 export async function updateDayAction(
   id: string,
@@ -36,13 +33,12 @@ export async function updateDayAction(
       };
     }
 
-    await updateDayUseCase.execute({
+    const useCase = new UpdateDayUseCase();
+    await useCase.execute({
       id,
       clerkId: userId,
       data: parsed.data,
     });
-
-    revalidateTag("earnings", "max");
 
     return {
       success: true,

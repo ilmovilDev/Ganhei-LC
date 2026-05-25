@@ -1,13 +1,10 @@
 "use client";
 
+import { usePeriodContext } from "@/providers/period-provider";
 import { CalendarDays } from "lucide-react";
 
-interface DaysEmptyStateProps {
-  month: number;
-  year: number;
-}
-
-export default function DaysEmptyState({ month, year }: DaysEmptyStateProps) {
+export default function DaysEmptyState() {
+  const { month, year } = usePeriodContext();
   return (
     <div className="bg-card flex h-full min-h-105 flex-col items-center justify-center rounded-2xl border border-dashed px-6 py-10 text-center shadow-sm">
       {/* ICON */}
