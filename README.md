@@ -1,831 +1,1440 @@
-# Earnings Module — Refactor Completo (Production Ready)
+# Migración Completa: Server Actions → React Query + API Routes
 
-## Problemas encontrados
+## Objetivo
 
-### 1. Arquitectura mezclada
+Migrar el módulo `earnings` desde una arquitectura híbrida basada en:
 
-Todavía coexistían:
+- Server Actions
+- Local state
+- useEffect
+- router.refresh
+- revalidatePath
 
-- flujo antiguo con métricas
-- flujo nuevo solo tabla
-- hooks incompatibles
-- outputs inconsistentes
-- DTOs no alineados
+hacia una arquitectura enterprise-ready basada en:
 
----
-
-### 2. N+1 Queries
-
-Tu `GetDaysByMonthUseCase` hacía:
-
-```ts
-findMany -> findById por cada row
-```
-
-Eso es un anti-pattern severo.
+- React Query
+- API Routes
+- Clean Architecture
+- Query Keys centralizadas
+- Cache consistente
+- Mutations desacopladas
+- Domain-driven structure
 
 ---
 
-### 3. Tipos inconsistentes
-
-Tenías:
-
-```ts
-Day;
-```
-
-mezclado con:
-
-```ts
-DayListItemDto;
-```
-
-además:
-
-```ts
-Date;
-```
-
-vs
-
-```ts
-string;
-```
-
-rompiendo toda la presentation layer.
-
----
-
-### 4. Hooks muertos
-
-Estos hooks ya NO aportan valor:
-
-- use-create-day.ts
-- use-update-day.ts
-
-Porque `DayForm` ya encapsula todo.
-
-Deben eliminarse.
-
----
-
-### 5. Provider correcto pero subutilizado
-
-Tu provider está bien.
-
-Pero varios componentes no refrescan correctamente.
-
----
-
-### 6. Output types incorrectos
-
-Todavía estabas retornando:
-
-```ts
-summary;
-total;
-```
-
-cuando el earnings page ya no necesita métricas.
-
----
-
-# ARCHIVOS A ELIMINAR
-
-## Eliminar completamente
+# Arquitectura Final
 
 ```txt
-presentation/hooks/use-create-day.ts
-presentation/hooks/use-update-day.ts
+UI
+ ↓
+React Query
+ ↓
+API Routes
+ ↓
+Application Services
+ ↓
+Domain
+ ↓
+Repositories
+ ↓
+Prisma
 ```
 
 ---
 
-# 1. types/outputs.types.ts
+# Estructura Final de Carpetas
 
-## REEMPLAZAR COMPLETO
+```txt
+src/
 
-```ts
-import { Result } from "@/types/result";
-
-import { DayListItemDto } from "../application/dtos/day-list-item.dto";
-
-export type GetDaysByMonthData = DayListItemDto[];
-
-export type CreateDayActionOutput = Result<{ success: true }>;
-
-export type UpdateDayActionOutput = Result<{ success: true }>;
-
-export type DeleteDayActionOutput = Result<{ success: true }>;
-
-export type GetDaysByMonthActionOutput = Result<GetDaysByMonthData>;
+├── app/
+│   ├── api/
+│   │   └── earnings/
+│   │       ├── route.ts
+│   │       ├── [id]/
+│   │       │   └── route.ts
+│   │       └── summaries/
+│   │           └── route.ts
+│   │
+│   └── (dashboard)/
+│       └── earnings/
+│           └── page.tsx
+│
+├── modules/
+│   └── earnings/
+│
+│       ├── application/
+│       │
+│       │   ├── dto/
+│       │   ├── services/
+│       │   ├── mappers/
+│       │   ├── commands/
+│       │   └── queries/
+│       │
+│       ├── domain/
+│       │
+│       │   ├── entities/
+│       │   ├── services/
+│       │   ├── repositories/
+│       │   └── value-objects/
+│       │
+│       ├── infrastructure/
+│       │
+│       │   ├── prisma/
+│       │   │   ├── repositories/
+│       │   │   └── transactions/
+│       │   │
+│       │   ├── auth/
+│       │   ├── telemetry/
+│       │   └── cache/
+│       │
+│       ├── presentation/
+│       │
+│       │   ├── hooks/
+│       │   │   ├── queries/
+│       │   │   ├── mutations/
+│       │   │   └── selectors/
+│       │   │
+│       │   ├── components/
+│       │   │   ├── dialogs/
+│       │   │   ├── forms/
+│       │   │   ├── table/
+│       │   │   ├── cards/
+│       │   │   └── states/
+│       │   │
+│       │   ├── lib/
+│       │   └── schemas/
+│       │
+│       └── shared/
+│
+├── providers/
+│   └── query-provider.tsx
+│
+├── lib/
+│   ├── db/
+│   ├── errors/
+│   ├── http/
+│   └── utils/
+│
+└── generated/
 ```
 
 ---
 
-# 2. infrastructure/repositories/day.repository.ts
+# ORDEN PROFESIONAL DE IMPLEMENTACIÓN
 
-## REEMPLAZAR COMPLETO
+---
+
+# FASE 1 — FOUNDATION
+
+---
+
+# 1. INSTALAR DEPENDENCIAS
+
+```bash
+npm install @tanstack/react-query
+npm install @tanstack/react-query-devtools
+```
+
+---
+
+# 2. CREAR QUERY PROVIDER
+
+## NUEVO
+
+```txt
+src/providers/query-provider.tsx
+```
+
+## RESPONSABILIDAD
+
+- Crear QueryClient
+- Configurar cache global
+- Configurar retry
+- Configurar staleTime
+- Exponer ReactQueryDevtools
+
+## IMPLEMENTAR PRIMERO
+
+---
+
+# 3. MODIFICAR ROOT LAYOUT
+
+## MODIFICAR
+
+```txt
+src/app/layout.tsx
+```
+
+## RESPONSABILIDAD
+
+- Envolver toda la app con QueryProvider
+
+---
+
+# 4. CREAR API CLIENT
+
+## NUEVO
+
+```txt
+src/lib/http/api-client.ts
+```
+
+## RESPONSABILIDAD
+
+Centralizar:
+
+- fetch
+- parse JSON
+- headers
+- error handling
+- auth token
+- interceptors futuros
+
+---
+
+# 5. CREAR QUERY KEYS
+
+## NUEVO
+
+```txt
+src/modules/earnings/presentation/lib/query-keys.ts
+```
+
+## RESPONSABILIDAD
+
+Centralizar TODAS las query keys.
+
+Nunca hardcodear arrays.
+
+---
+
+# FASE 2 — API LAYER
+
+---
+
+# 6. CREAR GET + POST ROUTE
+
+## NUEVO
+
+```txt
+src/app/api/earnings/route.ts
+```
+
+## RESPONSABILIDAD
+
+### GET
+
+- listar days
+- paginación futura
+- filtros
+- summary
+
+### POST
+
+- crear day
+
+---
+
+# 7. CREAR PATCH + DELETE ROUTE
+
+## NUEVO
+
+```txt
+src/app/api/earnings/[id]/route.ts
+```
+
+## RESPONSABILIDAD
+
+### PATCH
+
+- update day
+
+### DELETE
+
+- delete day
+
+---
+
+# IMPORTANTE
+
+Las routes:
+
+```txt
+NO contienen lógica de negocio
+```
+
+Solo:
+
+- auth
+- validate body
+- invoke service
+- return response
+
+---
+
+# FASE 3 — APPLICATION REFACTOR
+
+---
+
+# 8. ELIMINAR SERVER ACTIONS
+
+## ELIMINAR COMPLETAMENTE
+
+```txt
+application/actions/
+```
+
+---
+
+# 9. CREAR SERVICES
+
+## NUEVOS
+
+```txt
+application/services/create-day.service.ts
+application/services/update-day.service.ts
+application/services/delete-day.service.ts
+application/services/get-days.service.ts
+```
+
+## RESPONSABILIDAD
+
+Mover lógica desde:
+
+```txt
+Server Actions
+```
+
+hacia:
+
+```txt
+Application Services
+```
+
+---
+
+# 10. CREAR DTOs LIMPIOS
+
+## NUEVOS
+
+```txt
+application/dto/create-day.dto.ts
+application/dto/update-day.dto.ts
+application/dto/day-list-item.dto.ts
+application/dto/day-summary.dto.ts
+```
+
+## RESPONSABILIDAD
+
+- Contratos estables
+- Desacoplar Prisma
+- Evitar leaking entities
+
+---
+
+# 11. CREAR MAPPERS
+
+## NUEVOS
+
+```txt
+application/mappers/day.mapper.ts
+application/mappers/earning.mapper.ts
+```
+
+## RESPONSABILIDAD
+
+Mapear:
+
+- Prisma → DTO
+- DTO → Domain
+- Domain → Response
+
+---
+
+# FASE 4 — DOMAIN HARDENING
+
+---
+
+# 12. CREAR DOMAIN SERVICES
+
+## NUEVOS
+
+```txt
+domain/services/calculate-net-profit.ts
+domain/services/sync-day-financials.ts
+domain/services/validate-day.ts
+```
+
+## RESPONSABILIDAD
+
+Encapsular:
+
+- reglas financieras
+- cálculos
+- validaciones
+
+---
+
+# 13. CREAR VALUE OBJECTS
+
+## NUEVOS
+
+```txt
+domain/value-objects/money.vo.ts
+domain/value-objects/date.vo.ts
+```
+
+## RESPONSABILIDAD
+
+Evitar:
+
+- números inválidos
+- fechas inválidas
+- lógica repetida
+
+---
+
+# 14. CREAR REPOSITORY INTERFACES
+
+## NUEVO
+
+```txt
+domain/repositories/day.repository.interface.ts
+```
+
+## RESPONSABILIDAD
+
+Inversión de dependencias.
+
+---
+
+# FASE 5 — INFRASTRUCTURE
+
+---
+
+# 15. REFACTOR PRISMA REPOSITORIES
+
+## MODIFICAR
+
+```txt
+infrastructure/prisma/repositories/prisma-day.repository.ts
+infrastructure/prisma/repositories/prisma-earning.repository.ts
+```
+
+## RESPONSABILIDAD
+
+Repositories SOLO persisten.
+
+Nada de:
+
+- cálculos
+- validaciones
+- mapping
+- UI logic
+
+---
+
+# 16. CREAR AUTH WRAPPER
+
+## NUEVO
+
+```txt
+infrastructure/auth/require-auth.ts
+```
+
+## RESPONSABILIDAD
+
+Centralizar:
+
+- auth
+- clerkId
+- unauthorized errors
+
+---
+
+# 17. CREAR LOGGER
+
+## NUEVO
+
+```txt
+infrastructure/telemetry/logger.ts
+```
+
+## RESPONSABILIDAD
+
+- logs
+- observabilidad
+- métricas futuras
+
+---
+
+# FASE 6 — REACT QUERY LAYER
+
+---
+
+# 18. CREAR QUERY HOOKS
+
+## NUEVOS
+
+```txt
+presentation/hooks/queries/use-days.ts
+presentation/hooks/queries/use-day-summary.ts
+presentation/hooks/queries/use-day.ts
+```
+
+## RESPONSABILIDAD
+
+Queries ONLY.
+
+Nunca:
+
+- mutations
+- side effects
+- toasts
+
+---
+
+# 19. CREAR MUTATION HOOKS
+
+## NUEVOS
+
+```txt
+presentation/hooks/mutations/use-create-day.ts
+presentation/hooks/mutations/use-update-day.ts
+presentation/hooks/mutations/use-delete-day.ts
+presentation/hooks/mutations/use-create-expense.ts
+```
+
+## RESPONSABILIDAD
+
+Centralizar:
+
+- invalidateQueries
+- optimistic updates
+- toasts
+- rollback
+- retry
+
+---
+
+# 20. CREAR SELECTORS
+
+## NUEVOS
+
+```txt
+presentation/hooks/selectors/use-total-profit.ts
+presentation/hooks/selectors/use-total-expenses.ts
+```
+
+## RESPONSABILIDAD
+
+Evitar cálculos repetidos en componentes.
+
+---
+
+# FASE 7 — UI REFACTOR
+
+---
+
+# 21. REFACTOR DAYS VIEW
+
+## MODIFICAR
+
+```txt
+presentation/components/table/days-view.tsx
+```
+
+## RESPONSABILIDAD
+
+Eliminar:
+
+- useEffect fetching
+- local loading state
+- manual refresh
+
+Usar:
 
 ```ts
-import { Prisma } from "@/generated/prisma/client";
+useDays();
+```
 
-import { prisma } from "@/lib/db/prisma";
+---
 
-import { daySelect } from "../prisma/day.select";
+# 22. REFACTOR DAYS TABLE
 
-export class DayRepository {
-  async create(data: Prisma.DayCreateInput) {
-    return prisma.day.create({
-      data,
-      select: daySelect,
-    });
-  }
+## MODIFICAR
 
-  async update(id: string, data: Prisma.DayUpdateInput) {
-    return prisma.day.update({
-      where: { id },
-      data,
-      select: daySelect,
-    });
-  }
+```txt
+presentation/components/table/days-table.tsx
+```
 
-  async delete(id: string) {
-    return prisma.day.delete({
-      where: { id },
-    });
-  }
+## RESPONSABILIDAD
 
-  async findById(id: string) {
-    return prisma.day.findUnique({
-      where: { id },
-      select: daySelect,
-    });
-  }
+Eliminar:
 
-  async findManyByMonth({
-    clerkId,
-    startDate,
-    endDate,
-    limit,
-  }: {
-    clerkId: string;
-    startDate: Date;
-    endDate: Date;
-    limit?: number;
-  }) {
-    return prisma.day.findMany({
-      where: {
-        clerkId,
+```txt
+Server Actions directas
+```
 
-        date: {
-          gte: startDate,
-          lte: endDate,
+Usar:
+
+```txt
+useDeleteDay()
+```
+
+---
+
+# 23. REFACTOR DAY FORM
+
+## MODIFICAR
+
+```txt
+presentation/components/forms/day-form.tsx
+```
+
+## RESPONSABILIDAD
+
+Eliminar:
+
+```txt
+createDayAction()
+updateDayAction()
+```
+
+Usar:
+
+```txt
+useCreateDay()
+useUpdateDay()
+```
+
+---
+
+# 24. REFACTOR DIALOGS
+
+## MODIFICAR
+
+```txt
+presentation/components/dialogs/upsert-day-dialog.tsx
+```
+
+## RESPONSABILIDAD
+
+Desacoplar loading states.
+
+---
+
+# FASE 8 — CLEANUP
+
+---
+
+# 25. ELIMINAR router.refresh
+
+## ELIMINAR COMPLETAMENTE
+
+```txt
+router.refresh()
+```
+
+---
+
+# 26. ELIMINAR revalidatePath
+
+## ELIMINAR COMPLETAMENTE
+
+```txt
+revalidatePath()
+```
+
+---
+
+# 27. ELIMINAR revalidateTag
+
+## ELIMINAR COMPLETAMENTE
+
+```txt
+revalidateTag()
+```
+
+---
+
+# 28. ELIMINAR useEffect FETCHING
+
+## ELIMINAR
+
+Todos los:
+
+```txt
+useEffect(() => fetch())
+```
+
+---
+
+# FASE 9 — PERFORMANCE
+
+---
+
+# 29. MEMOIZAR COLUMNAS
+
+## MODIFICAR
+
+```txt
+presentation/components/table/columns-day.tsx
+```
+
+## RESPONSABILIDAD
+
+Evitar rerenders innecesarios.
+
+---
+
+# 30. OPTIMISTIC UPDATES
+
+## FUTURO
+
+Agregar:
+
+```txt
+onMutate()
+```
+
+---
+
+# 31. PAGINACIÓN
+
+## FUTURO
+
+Agregar:
+
+```txt
+useInfiniteQuery()
+```
+
+---
+
+# 32. REALTIME
+
+## FUTURO
+
+Agregar:
+
+- websocket
+- Pusher
+- Ably
+- Supabase Realtime
+
+---
+
+# COMPONENTES VIEJOS A ELIMINAR
+
+---
+
+# ELIMINAR COMPLETAMENTE
+
+```txt
+application/actions/create-day.action.ts
+application/actions/update-day.action.ts
+application/actions/delete-day.action.ts
+application/actions/get-days.action.ts
+```
+
+---
+
+# ELIMINAR COMPLETAMENTE
+
+```txt
+revalidatePath
+revalidateTag
+router.refresh
+```
+
+---
+
+# ELIMINAR useTransition
+
+Cuando React Query ya maneja loading state.
+
+---
+
+# ELIMINAR FETCH LOCAL
+
+```txt
+useEffect + fetch
+```
+
+---
+
+# PRINCIPIOS IMPORTANTES
+
+---
+
+# 1. QUERY KEYS CENTRALIZADAS
+
+Nunca:
+
+```ts
+["earnings"];
+```
+
+hardcodeado.
+
+---
+
+# 2. REPOSITORIES SIN LÓGICA
+
+Repositories SOLO persisten.
+
+---
+
+# 3. SERVICES ORQUESTAN
+
+Services contienen:
+
+- transacciones
+- validaciones
+- cálculos
+- orchestration
+
+---
+
+# 4. DOMAIN ES PURO
+
+Sin:
+
+- React
+- Prisma
+- HTTP
+- Next.js
+
+---
+
+# 5. PRESENTATION SOLO UI
+
+Nada de lógica financiera.
+
+---
+
+# INVENTARIO COMPLETO DE ARCHIVOS
+
+## FOUNDATION
+
+### NUEVOS
+
+```txt
+src/providers/query-provider.tsx
+src/lib/http/api-client.ts
+```
+
+### MODIFICAR
+
+```txt
+src/app/layout.tsx
+```
+
+---
+
+# API ROUTES
+
+## NUEVOS
+
+```txt
+src/app/api/earnings/route.ts
+src/app/api/earnings/[id]/route.ts
+src/app/api/earnings/summaries/route.ts
+```
+
+---
+
+# APPLICATION
+
+## ELIMINAR
+
+```txt
+src/modules/earnings/application/actions/create-day.action.ts
+src/modules/earnings/application/actions/update-day.action.ts
+src/modules/earnings/application/actions/delete-day.action.ts
+src/modules/earnings/application/actions/get-days.action.ts
+```
+
+## NUEVOS
+
+```txt
+src/modules/earnings/application/services/create-day.service.ts
+src/modules/earnings/application/services/update-day.service.ts
+src/modules/earnings/application/services/delete-day.service.ts
+src/modules/earnings/application/services/get-days.service.ts
+```
+
+---
+
+# DTOS
+
+## NUEVOS
+
+```txt
+src/modules/earnings/application/dto/create-day.dto.ts
+src/modules/earnings/application/dto/update-day.dto.ts
+src/modules/earnings/application/dto/day-list-item.dto.ts
+src/modules/earnings/application/dto/day-summary.dto.ts
+```
+
+---
+
+# MAPPERS
+
+## NUEVOS
+
+```txt
+src/modules/earnings/application/mappers/day.mapper.ts
+src/modules/earnings/application/mappers/earning.mapper.ts
+```
+
+---
+
+# DOMAIN
+
+## NUEVOS
+
+```txt
+src/modules/earnings/domain/services/calculate-net-profit.ts
+src/modules/earnings/domain/services/sync-day-financials.ts
+src/modules/earnings/domain/services/validate-day.ts
+```
+
+---
+
+# VALUE OBJECTS
+
+## NUEVOS
+
+```txt
+src/modules/earnings/domain/value-objects/money.vo.ts
+src/modules/earnings/domain/value-objects/date.vo.ts
+```
+
+---
+
+# REPOSITORY INTERFACES
+
+## NUEVOS
+
+```txt
+src/modules/earnings/domain/repositories/day.repository.interface.ts
+```
+
+---
+
+# INFRASTRUCTURE
+
+## MODIFICAR
+
+```txt
+src/modules/earnings/infrastructure/prisma/repositories/prisma-day.repository.ts
+src/modules/earnings/infrastructure/prisma/repositories/prisma-earning.repository.ts
+```
+
+## NUEVOS
+
+```txt
+src/modules/earnings/infrastructure/auth/require-auth.ts
+src/modules/earnings/infrastructure/telemetry/logger.ts
+src/modules/earnings/infrastructure/cache/query-keys.ts
+```
+
+---
+
+# REACT QUERY HOOKS
+
+## NUEVOS
+
+```txt
+src/modules/earnings/presentation/hooks/queries/use-days.ts
+src/modules/earnings/presentation/hooks/queries/use-day.ts
+src/modules/earnings/presentation/hooks/queries/use-day-summary.ts
+```
+
+---
+
+# MUTATIONS
+
+## NUEVOS
+
+```txt
+src/modules/earnings/presentation/hooks/mutations/use-create-day.ts
+src/modules/earnings/presentation/hooks/mutations/use-update-day.ts
+src/modules/earnings/presentation/hooks/mutations/use-delete-day.ts
+src/modules/earnings/presentation/hooks/mutations/use-create-expense.ts
+```
+
+---
+
+# SELECTORS
+
+## NUEVOS
+
+```txt
+src/modules/earnings/presentation/hooks/selectors/use-total-profit.ts
+src/modules/earnings/presentation/hooks/selectors/use-total-expenses.ts
+```
+
+---
+
+# QUERY LIB
+
+## NUEVOS
+
+```txt
+src/modules/earnings/presentation/lib/query-client.ts
+src/modules/earnings/presentation/lib/query-keys.ts
+```
+
+---
+
+# COMPONENTS
+
+## MODIFICAR
+
+```txt
+src/modules/earnings/presentation/components/table/days-view.tsx
+src/modules/earnings/presentation/components/table/days-table.tsx
+src/modules/earnings/presentation/components/table/columns-day.tsx
+src/modules/earnings/presentation/components/forms/day-form.tsx
+src/modules/earnings/presentation/components/dialogs/upsert-day-dialog.tsx
+```
+
+## NUEVOS
+
+```txt
+src/modules/earnings/presentation/components/states/loading-state.tsx
+src/modules/earnings/presentation/components/states/error-state.tsx
+src/modules/earnings/presentation/components/states/empty-state.tsx
+```
+
+---
+
+# CLEANUP
+
+## ELIMINAR COMPLETAMENTE
+
+```txt
+router.refresh()
+revalidatePath()
+revalidateTag()
+useTransition()
+useEffect(() => fetch())
+```
+
+---
+
+# CONTENIDO INTERNO BASE DE CADA ARCHIVO
+
+---
+
+# src/providers/query-provider.tsx
+
+```tsx
+"use client";
+
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+
+import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
+
+import { useState } from "react";
+
+interface Props {
+  children: React.ReactNode;
+}
+
+export function QueryProvider({ children }: Props) {
+  const [queryClient] = useState(
+    () =>
+      new QueryClient({
+        defaultOptions: {
+          queries: {
+            staleTime: 1000 * 30,
+            gcTime: 1000 * 60 * 5,
+            retry: 1,
+            refetchOnWindowFocus: false,
+          },
+
+          mutations: {
+            retry: 1,
+          },
         },
-      },
+      }),
+  );
 
-      orderBy: {
-        date: "desc",
-      },
+  return (
+    <QueryClientProvider client={queryClient}>
+      {children}
 
-      take: limit,
-
-      select: daySelect,
-    });
-  }
+      <ReactQueryDevtools initialIsOpen={false} />
+    </QueryClientProvider>
+  );
 }
 ```
 
 ---
 
-# 3. infrastructure/prisma/day.select.ts
-
-## REEMPLAZAR COMPLETO
+# src/lib/http/api-client.ts
 
 ```ts
-export const daySelect = {
-  id: true,
+export async function apiClient<T>(
+  input: RequestInfo,
+  init?: RequestInit,
+): Promise<T> {
+  const response = await fetch(input, {
+    ...init,
 
-  date: true,
-
-  hours: true,
-
-  kilometers: true,
-
-  totalEarnings: true,
-
-  totalExpenses: true,
-
-  netProfit: true,
-
-  createdAt: true,
-
-  earnings: {
-    select: {
-      id: true,
-      app: true,
-      amount: true,
+    headers: {
+      "Content-Type": "application/json",
+      ...(init?.headers ?? {}),
     },
-  },
-} as const;
-```
 
----
+    cache: "no-store",
+  });
 
-# 4. application/dtos/day-list-item.dto.ts
+  const data = await response.json();
 
-## REEMPLAZAR COMPLETO
+  if (!response.ok) {
+    throw new Error(data?.message ?? "Erro na requisição");
+  }
 
-```ts
-import { App } from "@/generated/prisma/enums";
-
-export interface DayListItemDto {
-  id: string;
-
-  date: string;
-
-  hours: number;
-
-  kilometers: number;
-
-  totalEarnings: number;
-
-  totalExpenses: number;
-
-  netProfit: number;
-
-  createdAt: string;
-
-  earnings: {
-    id: string;
-    app: App;
-    amount: number;
-  }[];
+  return data;
 }
 ```
 
 ---
 
-# 5. application/mappers/day-list-item.mapper.ts
-
-## REEMPLAZAR COMPLETO
+# src/modules/earnings/presentation/lib/query-keys.ts
 
 ```ts
-import { DayListItemDto } from "../dtos/day-list-item.dto";
+export const earningsKeys = {
+  all: ["earnings"] as const,
 
-export function toDayListItemDto(day: {
-  id: string;
-  date: Date;
-  hours: number;
-  kilometers: number;
-  totalEarnings: number;
-  totalExpenses: number;
-  netProfit: number;
-  createdAt: Date;
-  earnings: {
-    id: string;
-    app: string;
-    amount: number;
-  }[];
-}): DayListItemDto {
-  return {
-    id: day.id,
+  lists: () => [...earningsKeys.all, "list"] as const,
 
-    date: day.date.toISOString(),
+  list: (month: number, year: number) =>
+    [...earningsKeys.lists(), month, year] as const,
 
-    hours: day.hours,
-
-    kilometers: Number(day.kilometers),
-
-    totalEarnings: Number(day.totalEarnings),
-
-    totalExpenses: Number(day.totalExpenses),
-
-    netProfit: Number(day.netProfit),
-
-    createdAt: day.createdAt.toISOString(),
-
-    earnings: day.earnings.map((earning) => ({
-      id: earning.id,
-      app: earning.app as DayListItemDto["earnings"][number]["app"],
-      amount: Number(earning.amount),
-    })),
-  };
-}
+  detail: (id: string) => [...earningsKeys.all, id] as const,
+};
 ```
 
 ---
 
-# 6. application/use-cases/get-days-by-month.use-case.ts
-
-## REEMPLAZAR COMPLETO
+# src/app/api/earnings/route.ts
 
 ```ts
-import { DayRepository } from "../../infrastructure/repositories/day.repository";
+import { NextRequest, NextResponse } from "next/server";
 
-import { GetDaysByMonthInput } from "../../types/inputs.types";
+import { CreateDayService } from "@/modules/earnings/application/services/create-day.service";
+import { GetDaysService } from "@/modules/earnings/application/services/get-days.service";
 
-import { DayListItemDto } from "../dtos/day-list-item.dto";
+export async function GET(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url);
 
-import { toDayListItemDto } from "../mappers/day-list-item.mapper";
+    const month = Number(searchParams.get("month"));
 
-export class GetDaysByMonthUseCase {
-  private readonly dayRepository = new DayRepository();
+    const year = Number(searchParams.get("year"));
 
-  async execute({
-    clerkId,
-    month,
-    year,
-    limit,
-  }: GetDaysByMonthInput): Promise<DayListItemDto[]> {
-    const startDate = new Date(year, month - 1, 1);
+    const service = new GetDaysService();
 
-    const endDate = new Date(year, month, 0, 23, 59, 59);
-
-    const days = await this.dayRepository.findManyByMonth({
-      clerkId,
-      startDate,
-      endDate,
-      limit,
+    const data = await service.execute({
+      month,
+      year,
     });
 
-    return days.map(toDayListItemDto);
+    return NextResponse.json(data);
+  } catch (error) {
+    return NextResponse.json(
+      {
+        message: "Erro ao buscar registros",
+      },
+      {
+        status: 500,
+      },
+    );
+  }
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json();
+
+    const service = new CreateDayService();
+
+    const result = await service.execute(body);
+
+    return NextResponse.json(result);
+  } catch (error) {
+    return NextResponse.json(
+      {
+        message: "Erro ao criar registro",
+      },
+      {
+        status: 500,
+      },
+    );
   }
 }
 ```
 
 ---
 
-# 7. application/actions/get-days-by-month.action.ts
-
-## REEMPLAZAR COMPLETO
+# src/app/api/earnings/[id]/route.ts
 
 ```ts
-"use server";
+import { NextRequest, NextResponse } from "next/server";
 
-import { auth } from "@clerk/nextjs/server";
+import { DeleteDayService } from "@/modules/earnings/application/services/delete-day.service";
+import { UpdateDayService } from "@/modules/earnings/application/services/update-day.service";
 
-import { mapError } from "@/lib/errors/map-error";
+interface Params {
+  params: Promise<{
+    id: string;
+  }>;
+}
 
-import { GetDaysByMonthActionOutput } from "../../types/outputs.types";
+export async function PATCH(request: NextRequest, { params }: Params) {
+  try {
+    const { id } = await params;
 
-import { GetDaysByMonthUseCase } from "../use-cases/get-days-by-month.use-case";
+    const body = await request.json();
 
-const getDaysByMonthUseCase = new GetDaysByMonthUseCase();
+    const service = new UpdateDayService();
+
+    const result = await service.execute({
+      id,
+      data: body,
+    });
+
+    return NextResponse.json(result);
+  } catch {
+    return NextResponse.json(
+      {
+        message: "Erro ao atualizar registro",
+      },
+      {
+        status: 500,
+      },
+    );
+  }
+}
+
+export async function DELETE(_: NextRequest, { params }: Params) {
+  try {
+    const { id } = await params;
+
+    const service = new DeleteDayService();
+
+    const result = await service.execute(id);
+
+    return NextResponse.json(result);
+  } catch {
+    return NextResponse.json(
+      {
+        message: "Erro ao excluir registro",
+      },
+      {
+        status: 500,
+      },
+    );
+  }
+}
+```
+
+---
+
+# src/modules/earnings/presentation/hooks/queries/use-days.ts
+
+```ts
+"use client";
+
+import { useQuery } from "@tanstack/react-query";
+
+import { apiClient } from "@/lib/http/api-client";
+
+import { earningsKeys } from "../../lib/query-keys";
+
+import type { DayListItemDto } from "@/modules/earnings/application/dtos/day-list-item.dto";
 
 interface Params {
   month: number;
   year: number;
-  limit?: number;
 }
 
-export async function getDaysByMonthAction({
-  month,
-  year,
-  limit,
-}: Params): Promise<GetDaysByMonthActionOutput> {
-  try {
-    const { userId } = await auth();
+export function useDays({ month, year }: Params) {
+  return useQuery({
+    queryKey: earningsKeys.list(month, year),
 
-    if (!userId) {
-      throw new Error("Unauthorized.");
-    }
-
-    const data = await getDaysByMonthUseCase.execute({
-      clerkId: userId,
-      month,
-      year,
-      limit,
-    });
-
-    return {
-      success: true,
-      data,
-    };
-  } catch (error) {
-    return mapError(error);
-  }
+    queryFn: async () => {
+      return apiClient<DayListItemDto[]>(
+        `/api/earnings?month=${month}&year=${year}`,
+      );
+    },
+  });
 }
 ```
 
 ---
 
-# 8. presentation/hooks/use-day.ts
-
-## REEMPLAZAR COMPLETO
+# src/modules/earnings/presentation/hooks/mutations/use-create-day.ts
 
 ```ts
 "use client";
 
-import { useCallback, useEffect, useState, useTransition } from "react";
-
-import { getDaysByMonthAction } from "../../application/actions/get-days-by-month.action";
-
-import type { DayListItemDto } from "../../application/dtos/day-list-item.dto";
-
-import { useEarningsContext } from "../providers/earning-provider";
-
-export function useDays() {
-  const { month, year, version } = useEarningsContext();
-
-  const [rows, setRows] = useState<DayListItemDto[]>([]);
-
-  const [error, setError] = useState<string | null>(null);
-
-  const [isPending, startTransition] = useTransition();
-
-  const fetchDays = useCallback(() => {
-    startTransition(async () => {
-      setError(null);
-
-      const result = await getDaysByMonthAction({
-        month,
-        year,
-      });
-
-      if (!result.success) {
-        setError(result.error.message);
-        return;
-      }
-
-      setRows(result.data);
-    });
-  }, [month, year]);
-
-  useEffect(() => {
-    fetchDays();
-  }, [fetchDays, version]);
-
-  return {
-    rows,
-    error,
-    isPending,
-    refetch: fetchDays,
-  };
-}
-```
-
----
-
-# 9. presentation/components/create-day-dialog.tsx
-
-## REEMPLAZAR COMPLETO
-
-```tsx
-"use client";
-
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-
-import DayForm from "./day-form";
-
-import { useEarningsContext } from "../providers/earning-provider";
-
-interface Props {
-  open: boolean;
-  onOpenChange(open: boolean): void;
-}
-
-export default function CreateDayDialog({ open, onOpenChange }: Props) {
-  const { refetch } = useEarningsContext();
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-xl">
-        <DialogHeader>
-          <DialogTitle>Registrar dia</DialogTitle>
-
-          <DialogDescription>
-            Adicione os ganhos do seu dia de trabalho.
-          </DialogDescription>
-        </DialogHeader>
-
-        <DayForm
-          mode="create"
-          onSuccess={() => {
-            refetch();
-            onOpenChange(false);
-          }}
-        />
-      </DialogContent>
-    </Dialog>
-  );
-}
-```
-
----
-
-# 10. presentation/components/update-day-dialog.tsx
-
-## REEMPLAZAR COMPLETO
-
-```tsx
-"use client";
-
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-
-import DayForm from "./day-form";
-
-import { DayListItemDto } from "../../application/dtos/day-list-item.dto";
-
-import { useEarningsContext } from "../providers/earning-provider";
-
-interface Props {
-  open: boolean;
-  onOpenChange(open: boolean): void;
-  day: DayListItemDto;
-}
-
-export default function UpdateDayDialog({ open, onOpenChange, day }: Props) {
-  const { refetch } = useEarningsContext();
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-xl">
-        <DialogHeader>
-          <DialogTitle>Editar registro</DialogTitle>
-
-          <DialogDescription>Atualize as informações do dia.</DialogDescription>
-        </DialogHeader>
-
-        <DayForm
-          mode="update"
-          dayId={day.id}
-          initialData={{
-            date: day.date.slice(0, 10),
-            hours: day.hours,
-            kilometers: day.kilometers,
-            earnings: day.earnings,
-          }}
-          onSuccess={() => {
-            refetch();
-            onOpenChange(false);
-          }}
-        />
-      </DialogContent>
-    </Dialog>
-  );
-}
-```
-
----
-
-# 11. presentation/components/delete-day-dialog.tsx
-
-## REEMPLAZAR COMPLETO
-
-```tsx
-"use client";
-
-import { useTransition } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import { toast } from "sonner";
 
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { apiClient } from "@/lib/http/api-client";
 
-import { deleteDayAction } from "../../application/actions/delete-day.action";
+import { earningsKeys } from "../../lib/query-keys";
 
-import { useEarningsContext } from "../providers/earning-provider";
+import type { DayFormInput } from "../../schemas/day.schema";
 
-interface Props {
-  open: boolean;
-  onOpenChange(open: boolean): void;
-  dayId: string;
-}
+export function useCreateDay() {
+  const queryClient = useQueryClient();
 
-export default function DeleteDayDialog({ open, onOpenChange, dayId }: Props) {
-  const { refetch } = useEarningsContext();
+  return useMutation({
+    mutationFn: async (data: DayFormInput) => {
+      return apiClient(`/api/earnings`, {
+        method: "POST",
 
-  const [isPending, startTransition] = useTransition();
+        body: JSON.stringify(data),
+      });
+    },
 
-  function handleDelete() {
-    startTransition(async () => {
-      const result = await deleteDayAction(dayId);
+    onSuccess: async (_, variables) => {
+      const date = new Date(variables.date);
 
-      if (!result.success) {
-        toast.error(result.error.message);
-        return;
-      }
+      const month = date.getMonth() + 1;
 
-      toast.success("Registro excluído com sucesso!");
+      const year = date.getFullYear();
 
-      refetch();
+      await queryClient.invalidateQueries({
+        queryKey: earningsKeys.list(month, year),
+      });
 
-      onOpenChange(false);
-    });
-  }
+      toast.success("Registro criado com sucesso");
+    },
 
-  return (
-    <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>Excluir registro?</AlertDialogTitle>
-
-          <AlertDialogDescription>
-            Esta ação não pode ser desfeita.
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-
-        <AlertDialogFooter>
-          <AlertDialogCancel disabled={isPending}>Cancelar</AlertDialogCancel>
-
-          <AlertDialogAction disabled={isPending} onClick={handleDelete}>
-            Excluir
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
-  );
+    onError: () => {
+      toast.error("Erro ao criar registro");
+    },
+  });
 }
 ```
 
 ---
 
-# 12. presentation/components/earning-table.tsx
+# src/modules/earnings/presentation/hooks/mutations/use-update-day.ts
 
-## REEMPLAZAR COMPLETO
-
-```tsx
+```ts
 "use client";
 
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 
-import { Loader2 } from "lucide-react";
+import { toast } from "sonner";
 
-import { format } from "date-fns";
+import { apiClient } from "@/lib/http/api-client";
 
-import { ptBR } from "date-fns/locale";
+import { earningsKeys } from "../../lib/query-keys";
 
-import { formatCurrency } from "@/lib/utils/format-currency";
+import type { DayFormInput } from "../../schemas/day.schema";
 
-import EarningsEmptyState from "./earnings-empty-state";
+interface Payload {
+  id: string;
+  data: DayFormInput;
+}
 
-import { useDays } from "../hooks/use-day";
+export function useUpdateDay() {
+  const queryClient = useQueryClient();
 
-import DayRowActions from "./day-row-action";
+  return useMutation({
+    mutationFn: async ({ id, data }: Payload) => {
+      return apiClient(`/api/earnings/${id}`, {
+        method: "PATCH",
 
-export default function EarningsTable() {
-  const { rows, isPending, error } = useDays();
+        body: JSON.stringify(data),
+      });
+    },
 
-  if (isPending) {
-    return (
-      <div className="flex h-40 items-center justify-center">
-        <Loader2 className="text-muted-foreground size-5 animate-spin" />
-      </div>
-    );
-  }
+    onSuccess: async (_, variables) => {
+      const date = new Date(variables.data.date);
 
-  if (error) {
-    return <div className="text-destructive text-sm">{error}</div>;
-  }
+      const month = date.getMonth() + 1;
 
-  if (rows.length === 0) {
-    return <EarningsEmptyState />;
-  }
+      const year = date.getFullYear();
 
-  return (
-    <div className="rounded-2xl border">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Data</TableHead>
+      await queryClient.invalidateQueries({
+        queryKey: earningsKeys.list(month, year),
+      });
 
-            <TableHead>Horas</TableHead>
-
-            <TableHead>KM</TableHead>
-
-            <TableHead className="text-right">Ganhos</TableHead>
-
-            <TableHead className="text-right">Despesas</TableHead>
-
-            <TableHead className="text-right">Lucro</TableHead>
-
-            <TableHead className="w-[50px]" />
-          </TableRow>
-        </TableHeader>
-
-        <TableBody>
-          {rows.map((day) => (
-            <TableRow key={day.id}>
-              <TableCell>
-                {format(new Date(day.date), "dd MMM yyyy", {
-                  locale: ptBR,
-                })}
-              </TableCell>
-
-              <TableCell>{day.hours}h</TableCell>
-
-              <TableCell>{day.kilometers} km</TableCell>
-
-              <TableCell className="text-right font-medium">
-                {formatCurrency(day.totalEarnings)}
-              </TableCell>
-
-              <TableCell className="text-right">
-                {formatCurrency(day.totalExpenses)}
-              </TableCell>
-
-              <TableCell className="text-right font-semibold">
-                {formatCurrency(day.netProfit)}
-              </TableCell>
-
-              <TableCell>
-                <DayRowActions day={day} />
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </div>
-  );
+      toast.success("Registro atualizado com sucesso");
+    },
+  });
 }
 ```
 
 ---
 
-# 13. presentation/components/day-form.tsx
-
-## NO necesitas rehacerlo completamente
-
-Tu versión actual ya está muy cerca de production-ready.
-
-Solo asegúrate de:
+# src/modules/earnings/presentation/hooks/mutations/use-delete-day.ts
 
 ```ts
-mode: "onChange";
-```
+"use client";
 
-Y:
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 
-```ts
-form.reset(initialData);
-```
+import { toast } from "sonner";
 
-como ya tienes.
+import { apiClient } from "@/lib/http/api-client";
 
-El problema original del submit disabled ya quedó resuelto con:
+import { earningsKeys } from "../../lib/query-keys";
 
-```ts
-mode: "onChange";
-```
+interface Params {
+  month: number;
+  year: number;
+}
 
-porque antes usabas:
+export function useDeleteDay({ month, year }: Params) {
+  const queryClient = useQueryClient();
 
-```ts
-mode: "onBlur";
+  return useMutation({
+    mutationFn: async (id: string) => {
+      return apiClient(`/api/earnings/${id}`, {
+        method: "DELETE",
+      });
+    },
+
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: earningsKeys.list(month, year),
+      });
+
+      toast.success("Registro excluído com sucesso");
+    },
+  });
+}
 ```
 
 ---
 
 # RESULTADO FINAL
 
-Ahora:
+Tendrás:
 
-✅ earnings page solo renderiza tabla
-
-✅ no existen métricas acopladas
-
-✅ no existe N+1 query problem
-
-✅ DTOs consistentes
-
-✅ hooks consistentes
-
-✅ dialogs refrescan automáticamente
-
-✅ actions minimalistas
-
-✅ repository limpio
-
-✅ provider correctamente usado
-
-✅ forms funcionan correctamente
-
-✅ arquitectura production-ready
+- arquitectura enterprise
+- cache consistente
+- refresh instantáneo
+- optimistic updates
+- performance estable
+- invalidación correcta
+- escalabilidad real
+- debugging sencillo
+- separación clara de responsabilidades
+- clean architecture real
+- ready para mobile/websocket/realtime

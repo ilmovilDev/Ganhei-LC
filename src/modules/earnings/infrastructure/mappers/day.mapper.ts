@@ -2,7 +2,7 @@ import { Prisma } from "@/generated/prisma/client";
 import { Day } from "../../types/domain.types";
 
 type PrismaDayWithEarnings = Prisma.DayGetPayload<{
-  select: typeof import("../prisma/day.select").daySelect;
+  select: typeof import("../prisma/day.select").DAY_SELECT;
 }>;
 
 export function toDomainDay(day: PrismaDayWithEarnings): Day {

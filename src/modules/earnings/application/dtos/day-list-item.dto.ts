@@ -9,6 +9,7 @@ export interface DayListItemDto {
   totalExpenses: number;
   netProfit: number;
   createdAt: string;
+  updatedAt: string;
   earnings: {
     id: string;
     app: App;

@@ -1,9 +1,9 @@
 import { HeaderPage } from "@/components/navigations/header-page";
 import { requireUserOrRedirect } from "@/lib/auth/require-user-or-redirect";
-import { getCurrentMonth, getCurrentYear } from "@/lib/date";
-import CreateDayButton from "@/modules/earnings/presentation/components/form/create-day-button";
-import DaysView from "@/modules/earnings/presentation/components/table/days-view";
-import { PeriodProvider } from "@/providers/period-provider";
+import { parsePeriodParams } from "@/lib/params/parse-period-params";
+import CreateDayButton from "@/modules/earnings/presentation/components/buttons/create-day-button";
+import DaysView from "@/modules/earnings/presentation/components/ui/days-view";
+import { SelectedPeriodProvider } from "@/providers/context-provider";
 
 interface EarningsPageProps {
   searchParams: Promise<{
@@ -18,13 +18,12 @@ export default async function EarningsPage({
   await requireUserOrRedirect();
 
   const params = await searchParams;
-  const currentMonth = params.month ? Number(params.month) : getCurrentMonth();
-  const currentYear = params.year ? Number(params.year) : getCurrentYear();
+  const period = parsePeriodParams(params);
 
   // Verificar se o usuario tem permissão para registrar um dia...
 
   return (
-    <PeriodProvider month={currentMonth} year={currentYear}>
+    <SelectedPeriodProvider month={period.month} year={period.year}>
       <div className="flex h-full flex-col gap-4 overflow-hidden">
         <HeaderPage actions={<CreateDayButton userCanRegisterDay />} />
 
@@ -32,6 +31,6 @@ export default async function EarningsPage({
           <DaysView />
         </div>
       </div>
-    </PeriodProvider>
+    </SelectedPeriodProvider>
   );
 }

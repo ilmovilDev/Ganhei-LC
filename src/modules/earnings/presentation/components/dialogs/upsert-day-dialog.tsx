@@ -7,8 +7,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import DayForm from "./day-form";
 import { DayListItemDto } from "@/modules/earnings/application/dtos/day-list-item.dto";
+import DayForm from "../forms/day-form";
 
 interface Props {
   open: boolean;

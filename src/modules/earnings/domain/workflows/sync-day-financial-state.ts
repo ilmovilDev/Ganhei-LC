@@ -1,10 +1,11 @@
 import { Prisma } from "@/generated/prisma/client";
+import { App } from "@/generated/prisma/enums";
 
 interface SyncParams {
   tx: Prisma.TransactionClient;
   dayId: string;
   earnings: {
-    app: string;
+    app: App;
     amount: number;
   }[];
 }
@@ -14,38 +15,42 @@ export async function syncDayFinancialState({
   dayId,
   earnings,
 }: SyncParams) {
-  await tx.earning.deleteMany({
-    where: {
-      dayId,
-    },
-  });
+  // ─── 1. Resync earnings ───────────────────────────────────────────────────
+  await tx.earning.deleteMany({ where: { dayId } });
 
   if (earnings.length > 0) {
     await tx.earning.createMany({
       data: earnings.map((earning) => ({
         dayId,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        app: earning.app as any,
+        app: earning.app as App,
         amount: earning.amount,
       })),
     });
   }
 
-  const aggregates = await tx.earning.aggregate({
-    where: {
-      dayId,
-    },
-    _sum: {
-      amount: true,
-    },
-  });
+  // ─── 2. Agregar totales ───────────────────────────────────────────────────
+  const [earningsAgg, expensesAgg] = await Promise.all([
+    tx.earning.aggregate({
+      where: { dayId },
+      _sum: { amount: true },
+    }),
+    tx.expense.aggregate({
+      where: { dayId },
+      _sum: { amount: true },
+    }),
+  ]);
 
+  const totalEarnings = Number(earningsAgg._sum.amount ?? 0);
+  const totalExpenses = Number(expensesAgg._sum.amount ?? 0);
+  const netProfit = totalEarnings - totalExpenses;
+
+  // ─── 3. Actualizar Day con los tres campos ────────────────────────────────
   await tx.day.update({
-    where: {
-      id: dayId,
-    },
+    where: { id: dayId },
     data: {
-      totalEarnings: aggregates._sum.amount || 0,
+      totalEarnings,
+      totalExpenses,
+      netProfit,
     },
   });
 }

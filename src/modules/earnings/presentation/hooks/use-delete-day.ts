@@ -1,33 +1,54 @@
-"use client";
-
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { toast } from "sonner";
-import { deleteDayAction } from "../../application/actions/delete-day.action";
-import { earningsKeys } from "../lib/query-keys";
-import { usePeriodContext } from "@/providers/period-provider";
+import { deleteDayAction } from "../actions/delete-day.action";
+import { earningsKeys } from "../queries/query-keys";
+import { DayId } from "../../types/domain.types";
+import { DayListItemDto } from "../../application/dtos/day-list-item.dto";
+import { useSelectedPeriod } from "@/providers/context-provider";
 
-export function useDeleteDay() {
-  const { month, year } = usePeriodContext();
+interface UseDeleteDayOptions {
+  onSuccess?: () => void;
+  onError?: (message: string) => void;
+}
+
+export function useDeleteDay({ onSuccess, onError }: UseDeleteDayOptions) {
   const queryClient = useQueryClient();
+  const { month, year } = useSelectedPeriod();
+  const queryKey = earningsKeys.daysByMonth(year, month);
 
   return useMutation({
-    mutationFn: deleteDayAction,
+    mutationFn: (id: DayId) => deleteDayAction(id),
 
-    onSuccess: async (result) => {
+    // ─── Optimistic Update: remove imediatamente da lista ────────────────────
+    onMutate: async (id) => {
+      await queryClient.cancelQueries({ queryKey });
+
+      const previousDays = queryClient.getQueryData<DayListItemDto[]>(queryKey);
+
+      queryClient.setQueryData<DayListItemDto[]>(queryKey, (old = []) =>
+        old.filter((day) => day.id !== id),
+      );
+
+      return { previousDays };
+    },
+
+    // ─── Sucesso ──────────────────────────────────────────────────────────────
+    onSuccess: (result, _id, context) => {
       if (!result.success) {
-        toast.error(result.error.message);
+        queryClient.setQueryData(queryKey, context?.previousDays);
+        onError?.(result.error.message);
         return;
       }
 
-      await queryClient.invalidateQueries({
-        queryKey: earningsKeys.list(month, year),
-      });
-
-      toast.success("Registro removido");
+      // Delete não precisa de refetch — o item já foi removido otimisticamente
+      // Invalida apenas para garantir consistência com totalEarnings do servidor
+      queryClient.invalidateQueries({ queryKey });
+      onSuccess?.();
     },
 
-    onError: () => {
-      toast.error("Erro ao remover registro");
+    // ─── Erro: rollback ───────────────────────────────────────────────────────
+    onError: (_error, _id, context) => {
+      queryClient.setQueryData(queryKey, context?.previousDays);
+      onError?.("Erro inesperado ao excluir o dia.");
     },
   });
 }

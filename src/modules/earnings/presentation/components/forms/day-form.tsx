@@ -5,7 +5,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Controller, useFieldArray, useForm, useWatch } from "react-hook-form";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { CalendarIcon, Loader2 } from "lucide-react";
+import { CalendarIcon } from "lucide-react";
 import { App } from "@/generated/prisma/enums";
 import { cn } from "@/lib/utils";
 import { parseDayDate, toDayDate, todayDayDate } from "@/lib/date";
@@ -20,26 +20,22 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { createDayAction } from "../../../application/actions/create-day.action";
-import { updateDayAction } from "../../../application/actions/update-day.action";
-import EarningsFields from "./earning-fields";
 import { toast } from "sonner";
 import { useCreateDay } from "../../hooks/use-create-day";
 import { useUpdateDay } from "../../hooks/use-update-day";
+import EarningsFields from "./earnings-fields";
 
 /* -------------------------------------------------------------------------- */
-/* TYPES                                                                      */
+/* TYPES                                                                       */
 /* -------------------------------------------------------------------------- */
 interface DayFormProps {
   dayId?: string;
-
   defaultValues?: Partial<DayFormInput>;
-
-  onSuccess?: () => Promise<void> | void;
+  onSuccess?: () => void;
 }
 
 /* -------------------------------------------------------------------------- */
-/* CONSTANTS                                                                  */
+/* CONSTANTS                                                                   */
 /* -------------------------------------------------------------------------- */
 const SET_VALUE_OPTIONS = {
   shouldDirty: true,
@@ -55,7 +51,7 @@ const DEFAULT_VALUES: DayFormInput = {
 };
 
 /* -------------------------------------------------------------------------- */
-/* COMPONENT                                                                  */
+/* COMPONENT                                                                   */
 /* -------------------------------------------------------------------------- */
 export default function DayForm({
   dayId,
@@ -64,49 +60,49 @@ export default function DayForm({
 }: DayFormProps) {
   const isUpdate = !!dayId;
 
+  // ─── Form ─────────────────────────────────────────────────────────────────
   const form = useForm<DayFormInput>({
     resolver: zodResolver(dayFormSchema),
+    defaultValues: { ...DEFAULT_VALUES, ...defaultValues },
+  });
 
-    defaultValues: {
-      ...DEFAULT_VALUES,
-      ...defaultValues,
+  // ─── Mutations ────────────────────────────────────────────────────────────
+  const createMutation = useCreateDay({
+    onSuccess: () => {
+      toast.success("Registro criado com sucesso.");
+      form.reset(DEFAULT_VALUES);
+      onSuccess?.();
+    },
+    onError: (message) => {
+      form.setError("root", { message });
     },
   });
 
-  const createMutation = useCreateDay();
-
-  const updateMutation = useUpdateDay();
+  const updateMutation = useUpdateDay({
+    onSuccess: () => {
+      toast.success("Registro atualizado com sucesso.");
+      onSuccess?.();
+    },
+    onError: (message) => {
+      form.setError("root", { message });
+    },
+  });
 
   const isPending = createMutation.isPending || updateMutation.isPending;
 
-  const submitLabel = useMemo(() => {
-    if (isPending) {
-      return "Salvando...";
-    }
-
-    return isUpdate ? "Atualizar Registro" : "Criar Registro";
-  }, [isPending, isUpdate]);
-
-  /* ------------------------------------------------------------------------ */
-  /* RESET FORM WHEN DATA CHANGES                                             */
-  /* ------------------------------------------------------------------------ */
+  // ─── Sincroniza form quando defaultValues mudam (ex: abrir edit) ──────────
   useEffect(() => {
     if (!defaultValues) return;
-
     form.reset(defaultValues);
   }, [defaultValues, form]);
 
-  /* ------------------------------------------------------------------------ */
-  /* FIELD ARRAY                                                              */
-  /* ------------------------------------------------------------------------ */
+  // ─── Field Array ──────────────────────────────────────────────────────────
   const { fields, append, remove } = useFieldArray({
     control: form.control,
     name: "earnings",
   });
 
-  /* ------------------------------------------------------------------------ */
-  /* WATCHERS                                                                 */
-  /* ------------------------------------------------------------------------ */
+  // ─── Watchers ─────────────────────────────────────────────────────────────
   const earnings = useWatch({
     control: form.control,
     name: "earnings",
@@ -118,128 +114,62 @@ export default function DayForm({
     name: "date",
   });
 
-  /* ------------------------------------------------------------------------ */
-  /* DERIVED STATE                                                            */
-  /* ------------------------------------------------------------------------ */
-  const total = useMemo(() => {
-    return earnings.reduce(
-      (sum, earning) => sum + Number(earning.amount ?? 0),
+  // ─── Derived state ────────────────────────────────────────────────────────
+  const total = useMemo(
+    () => earnings.reduce((sum, e) => sum + Number(e.amount ?? 0), 0),
+    [earnings],
+  );
 
-      0,
-    );
-  }, [earnings]);
+  const selectedApps = useMemo(
+    () => earnings.map((e) => e.app).filter((app): app is App => app != null),
+    [earnings],
+  );
 
-  const selectedApps = useMemo(() => {
-    return earnings
-      .map((earning) => earning.app)
-      .filter((app): app is App => app != null);
-  }, [earnings]);
-
-  /* ------------------------------------------------------------------------ */
-  /* HELPERS                                                                  */
-  /* ------------------------------------------------------------------------ */
+  // ─── Helpers ──────────────────────────────────────────────────────────────
   const clearRootError = useCallback(() => {
     form.clearErrors("root");
   }, [form]);
 
-  /* ------------------------------------------------------------------------ */
-  /* HANDLERS                                                                 */
-  /* ------------------------------------------------------------------------ */
+  // ─── Handlers ─────────────────────────────────────────────────────────────
   const handleAddEarning = useCallback(() => {
     clearRootError();
-
-    append({
-      app: undefined as never,
-      amount: 0,
-    });
+    append({ app: undefined as never, amount: 0 });
   }, [append, clearRootError]);
 
   const handleSetApp = useCallback(
     (index: number, value: App) => {
       clearRootError();
-
       form.setValue(`earnings.${index}.app`, value, SET_VALUE_OPTIONS);
     },
-
     [clearRootError, form],
   );
 
   const handleSetAmount = useCallback(
     (index: number, value: number) => {
       clearRootError();
-
       form.setValue(`earnings.${index}.amount`, value, SET_VALUE_OPTIONS);
     },
-
     [clearRootError, form],
   );
 
   const handleSetDate = useCallback(
     (value: Date) => {
       clearRootError();
-
-      form.setValue(
-        "date",
-        toDayDate(value),
-
-        SET_VALUE_OPTIONS,
-      );
+      form.setValue("date", toDayDate(value), SET_VALUE_OPTIONS);
     },
-
     [clearRootError, form],
   );
 
-  async function onSubmit(values: DayFormInput) {
-    try {
-      let result;
-
-      if (isUpdate) {
-        if (!dayId) {
-          form.setError("root", {
-            message: "ID do registro não encontrado.",
-          });
-
-          return;
-        }
-
-        result = await updateMutation.mutateAsync({
-          id: dayId,
-          data: values,
-        });
-      } else {
-        result = await createMutation.mutateAsync(values);
-      }
-
-      if (!result.success) {
-        form.setError("root", {
-          message: result.error.message ?? "Erro ao salvar registro.",
-        });
-
-        return;
-      }
-
-      toast.success(
-        isUpdate
-          ? "Registro atualizado com sucesso."
-          : "Registro criado com sucesso.",
-      );
-
-      await onSuccess?.();
-
-      if (!isUpdate) {
-        form.reset(DEFAULT_VALUES);
-      }
-    } catch (error) {
-      console.error(error);
-
-      form.setError("root", {
-        message: "Erro inesperado. Tente novamente.",
-      });
+  function onSubmit(values: DayFormInput) {
+    if (isUpdate && dayId) {
+      updateMutation.mutate({ id: dayId, input: values });
+    } else {
+      createMutation.mutate(values);
     }
   }
 
   /* ------------------------------------------------------------------------ */
-  /* RENDER                                                                   */
+  /* RENDER                                                                    */
   /* ------------------------------------------------------------------------ */
   return (
     <div className="space-y-4 overflow-y-auto">
@@ -248,7 +178,6 @@ export default function DayForm({
         <span className="text-muted-foreground block text-xs">
           Total do dia
         </span>
-
         <span
           className={cn(
             "text-3xl font-semibold tracking-tight",
@@ -280,17 +209,10 @@ export default function DayForm({
                     className="h-11 w-full justify-between"
                   >
                     {field.value
-                      ? format(
-                          parseDayDate(field.value),
-
-                          "PPP",
-
-                          {
-                            locale: ptBR,
-                          },
-                        )
+                      ? format(parseDayDate(field.value), "PPP", {
+                          locale: ptBR,
+                        })
                       : "Selecionar data"}
-
                     <CalendarIcon className="h-4 w-4 opacity-60" />
                   </Button>
                 </PopoverTrigger>
@@ -301,21 +223,13 @@ export default function DayForm({
                     locale={ptBR}
                     selected={date ? parseDayDate(date) : undefined}
                     disabled={(currentDate) => {
-                      if (isUpdate) {
-                        return true;
-                      }
-
+                      if (isUpdate) return true;
                       const today = new Date();
-
                       today.setHours(23, 59, 59, 999);
-
                       return currentDate > today;
                     }}
                     onSelect={(value) => {
-                      if (!value || isUpdate) {
-                        return;
-                      }
-
+                      if (!value || isUpdate) return;
                       handleSetDate(value);
                     }}
                   />
@@ -339,12 +253,10 @@ export default function DayForm({
 
         {/* HOURS + KM */}
         <div className="grid grid-cols-2 gap-4">
-          {/* HOURS */}
           <div className="space-y-2">
             <label htmlFor="hours" className="text-sm font-medium">
               Horas trabalhadas
             </label>
-
             <Input
               id="hours"
               className="h-11"
@@ -353,11 +265,8 @@ export default function DayForm({
               min="1"
               max="24"
               placeholder="Ex: 8"
-              {...form.register("hours", {
-                valueAsNumber: true,
-              })}
+              {...form.register("hours", { valueAsNumber: true })}
             />
-
             {form.formState.errors.hours && (
               <p className="text-destructive text-xs">
                 {form.formState.errors.hours.message}
@@ -365,12 +274,10 @@ export default function DayForm({
             )}
           </div>
 
-          {/* KM */}
           <div className="space-y-2">
             <label htmlFor="kilometers" className="text-sm font-medium">
               Quilometragem
             </label>
-
             <Input
               id="kilometers"
               className="h-11"
@@ -378,11 +285,8 @@ export default function DayForm({
               step="0.01"
               min="0.01"
               placeholder="Ex: 120"
-              {...form.register("kilometers", {
-                valueAsNumber: true,
-              })}
+              {...form.register("kilometers", { valueAsNumber: true })}
             />
-
             {form.formState.errors.kilometers && (
               <p className="text-destructive text-xs">
                 {form.formState.errors.kilometers.message}
@@ -413,7 +317,11 @@ export default function DayForm({
           disabled={!form.formState.isValid || isPending}
           className="h-12 w-full"
         >
-          {submitLabel}
+          {isPending
+            ? "Salvando..."
+            : isUpdate
+              ? "Atualizar Registro"
+              : "Criar Registro"}
         </Button>
       </form>
     </div>

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { PlusIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import UpsertDayDialog from "./upsert-day-dialog";
+import UpsertDayDialog from "../dialogs/upsert-day-dialog";
 
 interface Props {
   userCanRegisterDay: boolean;

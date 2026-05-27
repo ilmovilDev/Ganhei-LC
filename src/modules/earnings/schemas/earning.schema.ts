@@ -9,7 +9,7 @@ export const earningAmountSchema = z
   .positive({
     message: "O valor deve ser maior que zero.",
   })
-  .max(999999.99, {
+  .max(9999.99, {
     message: "O valor informado é muito alto.",
   })
   .refine(isTwoDecimalNumber, {

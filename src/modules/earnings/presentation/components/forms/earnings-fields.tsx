@@ -11,7 +11,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { XIcon } from "lucide-react";
-import { Apps } from "../../../constants/app-labels";
+import { Apps } from "@/modules/earnings/constants/apps-label";
 
 interface Props {
   fields: {

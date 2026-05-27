@@ -3,14 +3,14 @@
 import { ColumnDef } from "@tanstack/react-table";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { ArrowUpDown, Pencil, Trash2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { ArrowUpDown } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { formatCurrency } from "@/lib/utils/format-currency";
 import { parseDayDate } from "@/lib/date";
-import { APP_LABELS } from "@/modules/earnings/constants/app-labels";
 import { DayListItemDto } from "@/modules/earnings/application/dtos/day-list-item.dto";
+import { APP_LABELS } from "@/modules/earnings/constants/apps-label";
+import { EarningsTableRowActions } from ".";
 
 /* -------------------------------------------------------------------------- */
 /* TYPES                                                                       */
@@ -18,7 +18,6 @@ import { DayListItemDto } from "@/modules/earnings/application/dtos/day-list-ite
 
 export interface EarningsColumnActions {
   onEdit: (day: DayListItemDto) => void;
-  onDelete: (day: DayListItemDto) => void;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -228,26 +227,7 @@ export function buildColumnsDay(
       size: 80,
       header: () => null,
       cell: ({ row }) => (
-        <div className="flex items-center justify-end gap-0.5">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="text-muted-foreground hover:text-foreground h-7 w-7"
-            onClick={() => actions.onEdit(row.original)}
-            aria-label="Editar"
-          >
-            <Pencil className="h-3.5 w-3.5" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="text-muted-foreground hover:text-destructive h-7 w-7"
-            onClick={() => actions.onDelete(row.original)}
-            aria-label="Excluir"
-          >
-            <Trash2 className="h-3.5 w-3.5" />
-          </Button>
-        </div>
+        <EarningsTableRowActions day={row.original} onEdit={actions.onEdit} />
       ),
     },
   ];

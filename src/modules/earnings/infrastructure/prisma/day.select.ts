@@ -1,4 +1,4 @@
-export const daySelect = {
+export const DAY_SELECT = {
   id: true,
   clerkId: true,
   date: true,

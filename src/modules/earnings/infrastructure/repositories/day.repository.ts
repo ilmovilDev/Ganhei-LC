@@ -1,7 +1,7 @@
 import { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/db/prisma";
-import { daySelect } from "../prisma/day.select";
 import { PrismaExecutor } from "@/lib/db/prisma.types";
+import { DAY_SELECT } from "../prisma/day.select";
 
 export class DayRepository {
   constructor(private readonly db: PrismaExecutor = prisma) {}
@@ -9,7 +9,7 @@ export class DayRepository {
   async create(data: Prisma.DayCreateInput) {
     return this.db.day.create({
       data,
-      select: daySelect,
+      select: DAY_SELECT,
     });
   }
 
@@ -17,19 +17,21 @@ export class DayRepository {
     return this.db.day.update({
       where: { id },
       data,
-      select: daySelect,
+      select: DAY_SELECT,
     });
   }
 
   async delete(id: string) {
     return this.db.day.delete({
       where: { id },
+      select: DAY_SELECT,
     });
   }
+
   async findById(id: string) {
     return this.db.day.findFirst({
       where: { id },
-      select: daySelect,
+      select: DAY_SELECT,
     });
   }
 
@@ -45,18 +47,14 @@ export class DayRepository {
     return this.db.day.findMany({
       where: {
         clerkId,
-
-        date: {
-          gte: startDate,
-          lte: endDate,
-        },
+        date: { gte: startDate, lt: endDate },
       },
 
       orderBy: {
         date: "desc",
       },
 
-      select: daySelect,
+      select: DAY_SELECT,
     });
   }
 }
