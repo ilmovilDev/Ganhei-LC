@@ -1,15 +1,11 @@
-import { AppErrorCode } from "./app-error-code";
-
 export class AppError extends Error {
-  constructor(
-    message: string,
+  public readonly statusCode: number;
 
-    public readonly code: AppErrorCode,
-
-    public readonly statusCode = 400,
-  ) {
+  constructor(message: string, statusCode = 400) {
     super(message);
 
     this.name = "AppError";
+
+    this.statusCode = statusCode;
   }
 }

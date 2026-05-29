@@ -1,99 +1,35 @@
-import { Prisma } from "@/generated/prisma/client";
 import { ZodError } from "zod";
 
 import { AppError } from "./app-error";
-import { Result } from "@/types/result";
 
-export function mapError(error: unknown): Result<never> {
-  // App errors
+export function mapError(error: unknown) {
   if (error instanceof AppError) {
     return {
-      success: false,
+      message: error.message,
 
-      code: error.code,
-
-      error: {
-        message: error.message,
-      },
+      statusCode: error.statusCode,
     };
   }
 
-  // Zod validation
   if (error instanceof ZodError) {
     return {
-      success: false,
+      message: error.issues[0]?.message ?? "Validation error",
 
-      code: "VALIDATION_ERROR",
-
-      error: {
-        message: error.issues[0]?.message ?? "Dados inválidos.",
-      },
-
-      details: error.flatten(),
+      statusCode: 400,
     };
   }
 
-  // Prisma known errors
-  if (error instanceof Prisma.PrismaClientKnownRequestError) {
-    switch (error.code) {
-      case "P2002":
-        return {
-          success: false,
-
-          code: "CONFLICT",
-
-          error: {
-            message: "Esse registro já existe.",
-          },
-        };
-
-      case "P2025":
-        return {
-          success: false,
-
-          code: "NOT_FOUND",
-
-          error: {
-            message: "Registro não encontrado.",
-          },
-        };
-
-      default:
-        return {
-          success: false,
-
-          code: "INTERNAL_ERROR",
-
-          error: {
-            message: "Erro no banco de dados.",
-          },
-        };
-    }
-  }
-
-  // Prisma connection/init
-  if (error instanceof Prisma.PrismaClientInitializationError) {
+  if (error instanceof Error) {
     return {
-      success: false,
+      message: error.message,
 
-      code: "INTERNAL_ERROR",
-
-      error: {
-        message: "Não foi possível conectar ao banco de dados.",
-      },
+      statusCode: 500,
     };
   }
-
-  // Unknown error
-  console.error("[UNHANDLED_ERROR]", error);
 
   return {
-    success: false,
+    message: "Internal server error",
 
-    code: "INTERNAL_ERROR",
-
-    error: {
-      message: "Ocorreu um erro inesperado.",
-    },
+    statusCode: 500,
   };
 }

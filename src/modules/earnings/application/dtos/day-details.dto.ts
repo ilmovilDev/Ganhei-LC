@@ -1,6 +1,6 @@
 import { EarningItemDto } from "./earning-item.dto";
 
-export interface DayListItemDto {
+export interface DayDetailsDto {
   id: string;
   date: string;
   hours: number;
@@ -8,7 +8,7 @@ export interface DayListItemDto {
   totalEarnings: number;
   totalExpenses: number;
   netProfit: number;
-  earnings: EarningItemDto[];
   createdAt: string;
   updatedAt: string;
+  earnings: EarningItemDto[];
 }

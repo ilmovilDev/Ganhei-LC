@@ -1,28 +1,31 @@
-import { Prisma } from "@/generated/prisma/client";
-import { prisma } from "@/lib/db/prisma";
-import { DayId } from "../../types/domain.types";
+import { Prisma, PrismaClient } from "@/generated/prisma/client";
+import {
+  CreateEarningRepositoryParams,
+  DeleteEarningRepositoryParams,
+  FindEarningRepositoryParams,
+} from "../../application/types";
 
-type DBClient = Prisma.TransactionClient | typeof prisma;
+type PrismaExecutor = PrismaClient | Prisma.TransactionClient;
 
 export class EarningRepository {
-  constructor(private readonly db: DBClient = prisma) {}
+  constructor(private readonly prisma: PrismaExecutor) {}
 
-  async createMany(data: Prisma.EarningCreateManyInput[]): Promise<void> {
-    await this.db.earning.createMany({
+  async createMany(data: CreateEarningRepositoryParams[]): Promise<void> {
+    await this.prisma.earning.createMany({
       data,
     });
   }
 
-  async deleteByDay(dayId: DayId): Promise<void> {
-    await this.db.earning.deleteMany({
+  async deleteByDay({ dayId }: DeleteEarningRepositoryParams): Promise<void> {
+    await this.prisma.earning.deleteMany({
       where: {
         dayId,
       },
     });
   }
 
-  async findByDay(dayId: DayId) {
-    return this.db.earning.findMany({
+  async findByDay({ dayId }: FindEarningRepositoryParams) {
+    return this.prisma.earning.findMany({
       where: {
         dayId,
       },

@@ -1,1440 +1,322 @@
-# Migración Completa: Server Actions → React Query + API Routes
+# Arquitectura del Módulo — Responsabilidades por Capa
 
-## Objetivo
-
-Migrar el módulo `earnings` desde una arquitectura híbrida basada en:
-
-- Server Actions
-- Local state
-- useEffect
-- router.refresh
-- revalidatePath
-
-hacia una arquitectura enterprise-ready basada en:
-
-- React Query
-- API Routes
-- Clean Architecture
-- Query Keys centralizadas
-- Cache consistente
-- Mutations desacopladas
-- Domain-driven structure
-
----
-
-# Arquitectura Final
+# Flujo General
 
 ```txt
 UI
- ↓
-React Query
- ↓
-API Routes
- ↓
-Application Services
- ↓
-Domain
- ↓
+↓
+Hooks (React Query)
+↓
+API Services
+↓
+Route Handlers
+↓
+Use Cases
+↓
 Repositories
- ↓
+↓
 Prisma
+↓
+Database
 ```
 
 ---
 
-# Estructura Final de Carpetas
+# 1. UI Layer
 
-```txt
-src/
+## `presentation/components`
 
-├── app/
-│   ├── api/
-│   │   └── earnings/
-│   │       ├── route.ts
-│   │       ├── [id]/
-│   │       │   └── route.ts
-│   │       └── summaries/
-│   │           └── route.ts
-│   │
-│   └── (dashboard)/
-│       └── earnings/
-│           └── page.tsx
-│
-├── modules/
-│   └── earnings/
-│
-│       ├── application/
-│       │
-│       │   ├── dto/
-│       │   ├── services/
-│       │   ├── mappers/
-│       │   ├── commands/
-│       │   └── queries/
-│       │
-│       ├── domain/
-│       │
-│       │   ├── entities/
-│       │   ├── services/
-│       │   ├── repositories/
-│       │   └── value-objects/
-│       │
-│       ├── infrastructure/
-│       │
-│       │   ├── prisma/
-│       │   │   ├── repositories/
-│       │   │   └── transactions/
-│       │   │
-│       │   ├── auth/
-│       │   ├── telemetry/
-│       │   └── cache/
-│       │
-│       ├── presentation/
-│       │
-│       │   ├── hooks/
-│       │   │   ├── queries/
-│       │   │   ├── mutations/
-│       │   │   └── selectors/
-│       │   │
-│       │   ├── components/
-│       │   │   ├── dialogs/
-│       │   │   ├── forms/
-│       │   │   ├── table/
-│       │   │   ├── cards/
-│       │   │   └── states/
-│       │   │
-│       │   ├── lib/
-│       │   └── schemas/
-│       │
-│       └── shared/
-│
-├── providers/
-│   └── query-provider.tsx
-│
-├── lib/
-│   ├── db/
-│   ├── errors/
-│   ├── http/
-│   └── utils/
-│
-└── generated/
-```
-
----
-
-# ORDEN PROFESIONAL DE IMPLEMENTACIÓN
-
----
-
-# FASE 1 — FOUNDATION
-
----
-
-# 1. INSTALAR DEPENDENCIAS
-
-```bash
-npm install @tanstack/react-query
-npm install @tanstack/react-query-devtools
-```
-
----
-
-# 2. CREAR QUERY PROVIDER
-
-## NUEVO
-
-```txt
-src/providers/query-provider.tsx
-```
-
-## RESPONSABILIDAD
-
-- Crear QueryClient
-- Configurar cache global
-- Configurar retry
-- Configurar staleTime
-- Exponer ReactQueryDevtools
-
-## IMPLEMENTAR PRIMERO
-
----
-
-# 3. MODIFICAR ROOT LAYOUT
-
-## MODIFICAR
-
-```txt
-src/app/layout.tsx
-```
-
-## RESPONSABILIDAD
-
-- Envolver toda la app con QueryProvider
-
----
-
-# 4. CREAR API CLIENT
-
-## NUEVO
-
-```txt
-src/lib/http/api-client.ts
-```
-
-## RESPONSABILIDAD
-
-Centralizar:
-
-- fetch
-- parse JSON
-- headers
-- error handling
-- auth token
-- interceptors futuros
-
----
-
-# 5. CREAR QUERY KEYS
-
-## NUEVO
-
-```txt
-src/modules/earnings/presentation/lib/query-keys.ts
-```
-
-## RESPONSABILIDAD
-
-Centralizar TODAS las query keys.
-
-Nunca hardcodear arrays.
-
----
-
-# FASE 2 — API LAYER
-
----
-
-# 6. CREAR GET + POST ROUTE
-
-## NUEVO
-
-```txt
-src/app/api/earnings/route.ts
-```
-
-## RESPONSABILIDAD
-
-### GET
-
-- listar days
-- paginación futura
-- filtros
-- summary
-
-### POST
-
-- crear day
-
----
-
-# 7. CREAR PATCH + DELETE ROUTE
-
-## NUEVO
-
-```txt
-src/app/api/earnings/[id]/route.ts
-```
-
-## RESPONSABILIDAD
-
-### PATCH
-
-- update day
-
-### DELETE
-
-- delete day
-
----
-
-# IMPORTANTE
-
-Las routes:
-
-```txt
-NO contienen lógica de negocio
-```
-
-Solo:
-
-- auth
-- validate body
-- invoke service
-- return response
-
----
-
-# FASE 3 — APPLICATION REFACTOR
-
----
-
-# 8. ELIMINAR SERVER ACTIONS
-
-## ELIMINAR COMPLETAMENTE
-
-```txt
-application/actions/
-```
-
----
-
-# 9. CREAR SERVICES
-
-## NUEVOS
-
-```txt
-application/services/create-day.service.ts
-application/services/update-day.service.ts
-application/services/delete-day.service.ts
-application/services/get-days.service.ts
-```
-
-## RESPONSABILIDAD
-
-Mover lógica desde:
-
-```txt
-Server Actions
-```
-
-hacia:
-
-```txt
-Application Services
-```
-
----
-
-# 10. CREAR DTOs LIMPIOS
-
-## NUEVOS
-
-```txt
-application/dto/create-day.dto.ts
-application/dto/update-day.dto.ts
-application/dto/day-list-item.dto.ts
-application/dto/day-summary.dto.ts
-```
-
-## RESPONSABILIDAD
-
-- Contratos estables
-- Desacoplar Prisma
-- Evitar leaking entities
-
----
-
-# 11. CREAR MAPPERS
-
-## NUEVOS
-
-```txt
-application/mappers/day.mapper.ts
-application/mappers/earning.mapper.ts
-```
-
-## RESPONSABILIDAD
-
-Mapear:
-
-- Prisma → DTO
-- DTO → Domain
-- Domain → Response
-
----
-
-# FASE 4 — DOMAIN HARDENING
-
----
-
-# 12. CREAR DOMAIN SERVICES
-
-## NUEVOS
-
-```txt
-domain/services/calculate-net-profit.ts
-domain/services/sync-day-financials.ts
-domain/services/validate-day.ts
-```
-
-## RESPONSABILIDAD
-
-Encapsular:
-
-- reglas financieras
-- cálculos
-- validaciones
-
----
-
-# 13. CREAR VALUE OBJECTS
-
-## NUEVOS
-
-```txt
-domain/value-objects/money.vo.ts
-domain/value-objects/date.vo.ts
-```
-
-## RESPONSABILIDAD
-
-Evitar:
-
-- números inválidos
-- fechas inválidas
-- lógica repetida
-
----
-
-# 14. CREAR REPOSITORY INTERFACES
-
-## NUEVO
-
-```txt
-domain/repositories/day.repository.interface.ts
-```
-
-## RESPONSABILIDAD
-
-Inversión de dependencias.
-
----
-
-# FASE 5 — INFRASTRUCTURE
-
----
-
-# 15. REFACTOR PRISMA REPOSITORIES
-
-## MODIFICAR
-
-```txt
-infrastructure/prisma/repositories/prisma-day.repository.ts
-infrastructure/prisma/repositories/prisma-earning.repository.ts
-```
-
-## RESPONSABILIDAD
-
-Repositories SOLO persisten.
-
-Nada de:
-
-- cálculos
-- validaciones
-- mapping
-- UI logic
-
----
-
-# 16. CREAR AUTH WRAPPER
-
-## NUEVO
-
-```txt
-infrastructure/auth/require-auth.ts
-```
-
-## RESPONSABILIDAD
-
-Centralizar:
-
-- auth
-- clerkId
-- unauthorized errors
-
----
-
-# 17. CREAR LOGGER
-
-## NUEVO
-
-```txt
-infrastructure/telemetry/logger.ts
-```
-
-## RESPONSABILIDAD
-
-- logs
-- observabilidad
-- métricas futuras
-
----
-
-# FASE 6 — REACT QUERY LAYER
-
----
-
-# 18. CREAR QUERY HOOKS
-
-## NUEVOS
-
-```txt
-presentation/hooks/queries/use-days.ts
-presentation/hooks/queries/use-day-summary.ts
-presentation/hooks/queries/use-day.ts
-```
-
-## RESPONSABILIDAD
-
-Queries ONLY.
-
-Nunca:
-
-- mutations
-- side effects
-- toasts
-
----
-
-# 19. CREAR MUTATION HOOKS
-
-## NUEVOS
-
-```txt
-presentation/hooks/mutations/use-create-day.ts
-presentation/hooks/mutations/use-update-day.ts
-presentation/hooks/mutations/use-delete-day.ts
-presentation/hooks/mutations/use-create-expense.ts
-```
-
-## RESPONSABILIDAD
-
-Centralizar:
-
-- invalidateQueries
-- optimistic updates
-- toasts
-- rollback
-- retry
-
----
-
-# 20. CREAR SELECTORS
-
-## NUEVOS
-
-```txt
-presentation/hooks/selectors/use-total-profit.ts
-presentation/hooks/selectors/use-total-expenses.ts
-```
-
-## RESPONSABILIDAD
-
-Evitar cálculos repetidos en componentes.
-
----
-
-# FASE 7 — UI REFACTOR
-
----
-
-# 21. REFACTOR DAYS VIEW
-
-## MODIFICAR
-
-```txt
-presentation/components/table/days-view.tsx
-```
-
-## RESPONSABILIDAD
-
-Eliminar:
-
-- useEffect fetching
-- local loading state
-- manual refresh
-
-Usar:
-
-```ts
-useDays();
-```
-
----
-
-# 22. REFACTOR DAYS TABLE
-
-## MODIFICAR
-
-```txt
-presentation/components/table/days-table.tsx
-```
-
-## RESPONSABILIDAD
-
-Eliminar:
-
-```txt
-Server Actions directas
-```
-
-Usar:
+# Responsabilidad
 
-```txt
-useDeleteDay()
-```
-
----
-
-# 23. REFACTOR DAY FORM
-
-## MODIFICAR
-
-```txt
-presentation/components/forms/day-form.tsx
-```
-
-## RESPONSABILIDAD
-
-Eliminar:
-
-```txt
-createDayAction()
-updateDayAction()
-```
-
-Usar:
-
-```txt
-useCreateDay()
-useUpdateDay()
-```
-
----
-
-# 24. REFACTOR DIALOGS
-
-## MODIFICAR
-
-```txt
-presentation/components/dialogs/upsert-day-dialog.tsx
-```
-
-## RESPONSABILIDAD
-
-Desacoplar loading states.
-
----
-
-# FASE 8 — CLEANUP
-
----
-
-# 25. ELIMINAR router.refresh
-
-## ELIMINAR COMPLETAMENTE
-
-```txt
-router.refresh()
-```
-
----
-
-# 26. ELIMINAR revalidatePath
-
-## ELIMINAR COMPLETAMENTE
-
-```txt
-revalidatePath()
-```
-
----
-
-# 27. ELIMINAR revalidateTag
-
-## ELIMINAR COMPLETAMENTE
-
-```txt
-revalidateTag()
-```
-
----
-
-# 28. ELIMINAR useEffect FETCHING
-
-## ELIMINAR
-
-Todos los:
-
-```txt
-useEffect(() => fetch())
-```
-
----
-
-# FASE 9 — PERFORMANCE
-
----
-
-# 29. MEMOIZAR COLUMNAS
-
-## MODIFICAR
-
-```txt
-presentation/components/table/columns-day.tsx
-```
-
-## RESPONSABILIDAD
-
-Evitar rerenders innecesarios.
-
----
-
-# 30. OPTIMISTIC UPDATES
-
-## FUTURO
-
-Agregar:
-
-```txt
-onMutate()
-```
-
----
-
-# 31. PAGINACIÓN
-
-## FUTURO
-
-Agregar:
-
-```txt
-useInfiniteQuery()
-```
-
----
-
-# 32. REALTIME
-
-## FUTURO
-
-Agregar:
-
-- websocket
-- Pusher
-- Ably
-- Supabase Realtime
-
----
-
-# COMPONENTES VIEJOS A ELIMINAR
-
----
-
-# ELIMINAR COMPLETAMENTE
-
-```txt
-application/actions/create-day.action.ts
-application/actions/update-day.action.ts
-application/actions/delete-day.action.ts
-application/actions/get-days.action.ts
-```
-
----
-
-# ELIMINAR COMPLETAMENTE
-
-```txt
-revalidatePath
-revalidateTag
-router.refresh
-```
-
----
-
-# ELIMINAR useTransition
-
-Cuando React Query ya maneja loading state.
-
----
-
-# ELIMINAR FETCH LOCAL
-
-```txt
-useEffect + fetch
-```
-
----
-
-# PRINCIPIOS IMPORTANTES
-
----
-
-# 1. QUERY KEYS CENTRALIZADAS
-
-Nunca:
-
-```ts
-["earnings"];
-```
-
-hardcodeado.
-
----
-
-# 2. REPOSITORIES SIN LÓGICA
-
-Repositories SOLO persisten.
+Renderizar la interfaz y capturar interacciones del usuario.
 
----
-
-# 3. SERVICES ORQUESTAN
-
-Services contienen:
-
-- transacciones
-- validaciones
-- cálculos
-- orchestration
-
----
-
-# 4. DOMAIN ES PURO
-
-Sin:
-
-- React
-- Prisma
-- HTTP
-- Next.js
-
----
-
-# 5. PRESENTATION SOLO UI
-
-Nada de lógica financiera.
-
----
-
-# INVENTARIO COMPLETO DE ARCHIVOS
-
-## FOUNDATION
-
-### NUEVOS
-
-```txt
-src/providers/query-provider.tsx
-src/lib/http/api-client.ts
-```
-
-### MODIFICAR
-
-```txt
-src/app/layout.tsx
-```
-
----
-
-# API ROUTES
-
-## NUEVOS
-
-```txt
-src/app/api/earnings/route.ts
-src/app/api/earnings/[id]/route.ts
-src/app/api/earnings/summaries/route.ts
-```
-
----
-
-# APPLICATION
-
-## ELIMINAR
-
-```txt
-src/modules/earnings/application/actions/create-day.action.ts
-src/modules/earnings/application/actions/update-day.action.ts
-src/modules/earnings/application/actions/delete-day.action.ts
-src/modules/earnings/application/actions/get-days.action.ts
-```
-
-## NUEVOS
-
-```txt
-src/modules/earnings/application/services/create-day.service.ts
-src/modules/earnings/application/services/update-day.service.ts
-src/modules/earnings/application/services/delete-day.service.ts
-src/modules/earnings/application/services/get-days.service.ts
-```
-
----
-
-# DTOS
-
-## NUEVOS
-
-```txt
-src/modules/earnings/application/dto/create-day.dto.ts
-src/modules/earnings/application/dto/update-day.dto.ts
-src/modules/earnings/application/dto/day-list-item.dto.ts
-src/modules/earnings/application/dto/day-summary.dto.ts
-```
-
----
-
-# MAPPERS
-
-## NUEVOS
-
-```txt
-src/modules/earnings/application/mappers/day.mapper.ts
-src/modules/earnings/application/mappers/earning.mapper.ts
-```
-
----
-
-# DOMAIN
-
-## NUEVOS
-
-```txt
-src/modules/earnings/domain/services/calculate-net-profit.ts
-src/modules/earnings/domain/services/sync-day-financials.ts
-src/modules/earnings/domain/services/validate-day.ts
-```
-
----
-
-# VALUE OBJECTS
+# Qué debe hacer
 
-## NUEVOS
+- Mostrar datos
+- Mostrar loading/error/empty states
+- Manejar eventos UI
+- Renderizar tablas, cards, forms, dialogs
+- Consumir hooks
 
-```txt
-src/modules/earnings/domain/value-objects/money.vo.ts
-src/modules/earnings/domain/value-objects/date.vo.ts
-```
-
----
-
-# REPOSITORY INTERFACES
-
-## NUEVOS
-
-```txt
-src/modules/earnings/domain/repositories/day.repository.interface.ts
-```
-
----
-
-# INFRASTRUCTURE
-
-## MODIFICAR
-
-```txt
-src/modules/earnings/infrastructure/prisma/repositories/prisma-day.repository.ts
-src/modules/earnings/infrastructure/prisma/repositories/prisma-earning.repository.ts
-```
-
-## NUEVOS
-
-```txt
-src/modules/earnings/infrastructure/auth/require-auth.ts
-src/modules/earnings/infrastructure/telemetry/logger.ts
-src/modules/earnings/infrastructure/cache/query-keys.ts
-```
-
----
-
-# REACT QUERY HOOKS
-
-## NUEVOS
-
-```txt
-src/modules/earnings/presentation/hooks/queries/use-days.ts
-src/modules/earnings/presentation/hooks/queries/use-day.ts
-src/modules/earnings/presentation/hooks/queries/use-day-summary.ts
-```
-
----
-
-# MUTATIONS
-
-## NUEVOS
-
-```txt
-src/modules/earnings/presentation/hooks/mutations/use-create-day.ts
-src/modules/earnings/presentation/hooks/mutations/use-update-day.ts
-src/modules/earnings/presentation/hooks/mutations/use-delete-day.ts
-src/modules/earnings/presentation/hooks/mutations/use-create-expense.ts
-```
-
----
-
-# SELECTORS
-
-## NUEVOS
-
-```txt
-src/modules/earnings/presentation/hooks/selectors/use-total-profit.ts
-src/modules/earnings/presentation/hooks/selectors/use-total-expenses.ts
-```
-
----
-
-# QUERY LIB
-
-## NUEVOS
-
-```txt
-src/modules/earnings/presentation/lib/query-client.ts
-src/modules/earnings/presentation/lib/query-keys.ts
-```
-
----
-
-# COMPONENTS
-
-## MODIFICAR
+# Qué NO debe hacer
 
-```txt
-src/modules/earnings/presentation/components/table/days-view.tsx
-src/modules/earnings/presentation/components/table/days-table.tsx
-src/modules/earnings/presentation/components/table/columns-day.tsx
-src/modules/earnings/presentation/components/forms/day-form.tsx
-src/modules/earnings/presentation/components/dialogs/upsert-day-dialog.tsx
-```
-
-## NUEVOS
-
-```txt
-src/modules/earnings/presentation/components/states/loading-state.tsx
-src/modules/earnings/presentation/components/states/error-state.tsx
-src/modules/earnings/presentation/components/states/empty-state.tsx
-```
-
----
-
-# CLEANUP
-
-## ELIMINAR COMPLETAMENTE
-
-```txt
-router.refresh()
-revalidatePath()
-revalidateTag()
-useTransition()
-useEffect(() => fetch())
-```
-
----
-
-# CONTENIDO INTERNO BASE DE CADA ARCHIVO
-
----
+- Fetch manual
+- Lógica de negocio
+- Queries Prisma
+- Validaciones complejas
+- Cálculos financieros
 
-# src/providers/query-provider.tsx
+# Ejemplo
 
 ```tsx
-"use client";
+const { days } = useDaysByMonth();
 
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-
-import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
-
-import { useState } from "react";
-
-interface Props {
-  children: React.ReactNode;
-}
-
-export function QueryProvider({ children }: Props) {
-  const [queryClient] = useState(
-    () =>
-      new QueryClient({
-        defaultOptions: {
-          queries: {
-            staleTime: 1000 * 30,
-            gcTime: 1000 * 60 * 5,
-            retry: 1,
-            refetchOnWindowFocus: false,
-          },
-
-          mutations: {
-            retry: 1,
-          },
-        },
-      }),
-  );
-
-  return (
-    <QueryClientProvider client={queryClient}>
-      {children}
-
-      <ReactQueryDevtools initialIsOpen={false} />
-    </QueryClientProvider>
-  );
-}
+return <DaysTable data={days} />;
 ```
 
 ---
 
-# src/lib/http/api-client.ts
+# 2. Hooks Layer (React Query)
+
+## `presentation/hooks`
+
+# Responsabilidad
+
+Conectar UI con server-state.
+
+# Qué debe hacer
+
+- useQuery/useMutation
+- Cache
+- Invalidaciones
+- Optimistic updates
+- Loading/error state
+- Query keys
+
+# Qué NO debe hacer
+
+- Lógica de negocio
+- Prisma
+- Validaciones Zod
+- HTTP manual
+
+# Ejemplo
 
 ```ts
-export async function apiClient<T>(
-  input: RequestInfo,
-  init?: RequestInit,
-): Promise<T> {
-  const response = await fetch(input, {
-    ...init,
-
-    headers: {
-      "Content-Type": "application/json",
-      ...(init?.headers ?? {}),
-    },
-
-    cache: "no-store",
-  });
-
-  const data = await response.json();
-
-  if (!response.ok) {
-    throw new Error(data?.message ?? "Erro na requisição");
-  }
-
-  return data;
-}
+useQuery({
+  queryKey: ["days", month, year],
+  queryFn: () => getDaysApi(month, year),
+});
 ```
 
 ---
 
-# src/modules/earnings/presentation/lib/query-keys.ts
+# 3. API Services
+
+## `presentation/services`
+
+# Responsabilidad
+
+Cliente HTTP frontend.
+
+# Qué debe hacer
+
+- fetch
+- parse response
+- enviar body
+- manejar headers
+
+# Qué NO debe hacer
+
+- Cache
+- Lógica de negocio
+- Estado UI
+- Prisma
+
+# Ejemplo
 
 ```ts
-export const earningsKeys = {
-  all: ["earnings"] as const,
+return apiClient.get("/api/earnings/days");
+```
 
-  lists: () => [...earningsKeys.all, "list"] as const,
+---
 
-  list: (month: number, year: number) =>
-    [...earningsKeys.lists(), month, year] as const,
+# 4. Route Handlers
 
-  detail: (id: string) => [...earningsKeys.all, id] as const,
+## `app/api`
+
+# Responsabilidad
+
+Entrada HTTP del backend.
+
+# Qué debe hacer
+
+- Leer request
+- Leer params
+- Auth
+- Validar input
+- Llamar use-case
+- Retornar response
+
+# Qué NO debe hacer
+
+- Prisma directo
+- Lógica financiera
+- Reglas de negocio
+
+# Ejemplo
+
+```ts
+const result = await useCase.execute();
+```
+
+---
+
+# 5. Use Cases
+
+## `application/use-cases`
+
+# Responsabilidad
+
+Orquestar reglas de negocio.
+
+# Qué debe hacer
+
+- Ejecutar lógica del sistema
+- Coordinar repositories
+- Manejar transacciones
+- Aplicar reglas de negocio
+
+# Qué NO debe hacer
+
+- HTTP
+- React
+- JSX
+- NextResponse
+
+# Ejemplo
+
+```ts
+create day
+↓
+sync earnings
+↓
+recalculate totals
+```
+
+---
+
+# 6. Repositories
+
+## `infrastructure/repositories`
+
+# Responsabilidad
+
+Acceso a datos.
+
+# Qué debe hacer
+
+- Queries Prisma
+- CRUD
+- where/select/orderBy
+
+# Qué NO debe hacer
+
+- Reglas de negocio
+- HTTP
+- React Query
+
+# Ejemplo
+
+```ts
+prisma.day.findMany();
+```
+
+---
+
+# 7. Prisma Layer
+
+## `infrastructure/selects`
+
+# Responsabilidad
+
+Comunicación con la base de datos.
+
+# Qué debe hacer
+
+- Modelos
+- Selects
+- Includes
+- Relaciones
+- Optimización de queries
+
+# Qué NO debe hacer
+
+- Lógica de negocio
+- UI
+- HTTP
+
+# Ejemplo
+
+```ts
+export const daySelect = {
+  id: true,
+  date: true,
 };
 ```
 
 ---
 
-# src/app/api/earnings/route.ts
+# 8. Database
 
-```ts
-import { NextRequest, NextResponse } from "next/server";
+## PostgreSQL
 
-import { CreateDayService } from "@/modules/earnings/application/services/create-day.service";
-import { GetDaysService } from "@/modules/earnings/application/services/get-days.service";
+# Responsabilidad
 
-export async function GET(request: NextRequest) {
-  try {
-    const { searchParams } = new URL(request.url);
+Persistencia real de datos.
 
-    const month = Number(searchParams.get("month"));
+# Qué hace
 
-    const year = Number(searchParams.get("year"));
+- Guardar datos
+- Ejecutar índices
+- Constraints
+- Relaciones
+- Transactions
 
-    const service = new GetDaysService();
+# Qué NO debe hacer
 
-    const data = await service.execute({
-      month,
-      year,
-    });
+- Lógica de aplicación
+- Reglas frontend
 
-    return NextResponse.json(data);
-  } catch (error) {
-    return NextResponse.json(
-      {
-        message: "Erro ao buscar registros",
-      },
-      {
-        status: 500,
-      },
-    );
-  }
-}
+---
 
-export async function POST(request: NextRequest) {
-  try {
-    const body = await request.json();
+# Regla de Oro
 
-    const service = new CreateDayService();
+# Cada capa debe saber SOLO lo necesario.
 
-    const result = await service.execute(body);
+---
 
-    return NextResponse.json(result);
-  } catch (error) {
-    return NextResponse.json(
-      {
-        message: "Erro ao criar registro",
-      },
-      {
-        status: 500,
-      },
-    );
-  }
-}
+# Ejemplo Correcto
+
+```txt
+UI sabe renderizar
+Hooks saben cachear
+Services saben hacer HTTP
+Routes saben recibir requests
+Use-cases saben negocio
+Repositories saben consultar
+Prisma sabe SQL
+DB sabe persistir
 ```
 
 ---
 
-# src/app/api/earnings/[id]/route.ts
+# Señales de Mala Arquitectura
 
-```ts
-import { NextRequest, NextResponse } from "next/server";
+## ❌ Prisma dentro de componentes
 
-import { DeleteDayService } from "@/modules/earnings/application/services/delete-day.service";
-import { UpdateDayService } from "@/modules/earnings/application/services/update-day.service";
+## ❌ lógica financiera dentro de hooks
 
-interface Params {
-  params: Promise<{
-    id: string;
-  }>;
-}
+## ❌ fetch manual dentro de UI
 
-export async function PATCH(request: NextRequest, { params }: Params) {
-  try {
-    const { id } = await params;
+## ❌ use-case retornando NextResponse
 
-    const body = await request.json();
+## ❌ repository calculando negocio
 
-    const service = new UpdateDayService();
+## ❌ context guardando server-state
 
-    const result = await service.execute({
-      id,
-      data: body,
-    });
-
-    return NextResponse.json(result);
-  } catch {
-    return NextResponse.json(
-      {
-        message: "Erro ao atualizar registro",
-      },
-      {
-        status: 500,
-      },
-    );
-  }
-}
-
-export async function DELETE(_: NextRequest, { params }: Params) {
-  try {
-    const { id } = await params;
-
-    const service = new DeleteDayService();
-
-    const result = await service.execute(id);
-
-    return NextResponse.json(result);
-  } catch {
-    return NextResponse.json(
-      {
-        message: "Erro ao excluir registro",
-      },
-      {
-        status: 500,
-      },
-    );
-  }
-}
-```
+## ❌ React Query dentro de services
 
 ---
 
-# src/modules/earnings/presentation/hooks/queries/use-days.ts
+# Objetivo Final
 
-```ts
-"use client";
+Lograr:
 
-import { useQuery } from "@tanstack/react-query";
-
-import { apiClient } from "@/lib/http/api-client";
-
-import { earningsKeys } from "../../lib/query-keys";
-
-import type { DayListItemDto } from "@/modules/earnings/application/dtos/day-list-item.dto";
-
-interface Params {
-  month: number;
-  year: number;
-}
-
-export function useDays({ month, year }: Params) {
-  return useQuery({
-    queryKey: earningsKeys.list(month, year),
-
-    queryFn: async () => {
-      return apiClient<DayListItemDto[]>(
-        `/api/earnings?month=${month}&year=${year}`,
-      );
-    },
-  });
-}
-```
-
----
-
-# src/modules/earnings/presentation/hooks/mutations/use-create-day.ts
-
-```ts
-"use client";
-
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-
-import { toast } from "sonner";
-
-import { apiClient } from "@/lib/http/api-client";
-
-import { earningsKeys } from "../../lib/query-keys";
-
-import type { DayFormInput } from "../../schemas/day.schema";
-
-export function useCreateDay() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async (data: DayFormInput) => {
-      return apiClient(`/api/earnings`, {
-        method: "POST",
-
-        body: JSON.stringify(data),
-      });
-    },
-
-    onSuccess: async (_, variables) => {
-      const date = new Date(variables.date);
-
-      const month = date.getMonth() + 1;
-
-      const year = date.getFullYear();
-
-      await queryClient.invalidateQueries({
-        queryKey: earningsKeys.list(month, year),
-      });
-
-      toast.success("Registro criado com sucesso");
-    },
-
-    onError: () => {
-      toast.error("Erro ao criar registro");
-    },
-  });
-}
-```
-
----
-
-# src/modules/earnings/presentation/hooks/mutations/use-update-day.ts
-
-```ts
-"use client";
-
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-
-import { toast } from "sonner";
-
-import { apiClient } from "@/lib/http/api-client";
-
-import { earningsKeys } from "../../lib/query-keys";
-
-import type { DayFormInput } from "../../schemas/day.schema";
-
-interface Payload {
-  id: string;
-  data: DayFormInput;
-}
-
-export function useUpdateDay() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async ({ id, data }: Payload) => {
-      return apiClient(`/api/earnings/${id}`, {
-        method: "PATCH",
-
-        body: JSON.stringify(data),
-      });
-    },
-
-    onSuccess: async (_, variables) => {
-      const date = new Date(variables.data.date);
-
-      const month = date.getMonth() + 1;
-
-      const year = date.getFullYear();
-
-      await queryClient.invalidateQueries({
-        queryKey: earningsKeys.list(month, year),
-      });
-
-      toast.success("Registro atualizado com sucesso");
-    },
-  });
-}
-```
-
----
-
-# src/modules/earnings/presentation/hooks/mutations/use-delete-day.ts
-
-```ts
-"use client";
-
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-
-import { toast } from "sonner";
-
-import { apiClient } from "@/lib/http/api-client";
-
-import { earningsKeys } from "../../lib/query-keys";
-
-interface Params {
-  month: number;
-  year: number;
-}
-
-export function useDeleteDay({ month, year }: Params) {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async (id: string) => {
-      return apiClient(`/api/earnings/${id}`, {
-        method: "DELETE",
-      });
-    },
-
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({
-        queryKey: earningsKeys.list(month, year),
-      });
-
-      toast.success("Registro excluído com sucesso");
-    },
-  });
-}
-```
-
----
-
-# RESULTADO FINAL
-
-Tendrás:
-
-- arquitectura enterprise
-- cache consistente
-- refresh instantáneo
-- optimistic updates
-- performance estable
-- invalidación correcta
-- escalabilidad real
-- debugging sencillo
-- separación clara de responsabilidades
-- clean architecture real
-- ready para mobile/websocket/realtime
+- Bajo acoplamiento
+- Alta mantenibilidad
+- Escalabilidad
+- Performance
+- Código predecible
+- Fácil testing
+- Arquitectura limpia

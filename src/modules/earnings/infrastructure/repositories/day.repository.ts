@@ -1,60 +1,137 @@
-import { Prisma } from "@/generated/prisma/client";
-import { prisma } from "@/lib/db/prisma";
-import { PrismaExecutor } from "@/lib/db/prisma.types";
-import { DAY_SELECT } from "../prisma/day.select";
+import { Prisma, PrismaClient } from "@/generated/prisma/client";
+import { daySelect } from "../select/day.select";
+import {
+  CreateDayRepositoryParams,
+  DeleteDayRepositoryParams,
+  FindDayByIdParams,
+  FindManyDaysByMonthParams,
+  UpdateDayRepositoryParams,
+  UpdateFinancialTotalsRepositoryParams,
+} from "../../application/types/day-repository.types";
+import { DayRepositoryContract } from "../../domain/contracts/day-repository.contract";
 
-export class DayRepository {
-  constructor(private readonly db: PrismaExecutor = prisma) {}
+type PrismaExecutor = PrismaClient | Prisma.TransactionClient;
 
-  async create(data: Prisma.DayCreateInput) {
-    return this.db.day.create({
-      data,
-      select: DAY_SELECT,
-    });
-  }
+export class DayRepository implements DayRepositoryContract {
+  constructor(private readonly prisma: PrismaExecutor) {}
 
-  async update(id: string, data: Prisma.DayUpdateInput) {
-    return this.db.day.update({
-      where: { id },
-      data,
-      select: DAY_SELECT,
-    });
-  }
-
-  async delete(id: string) {
-    return this.db.day.delete({
-      where: { id },
-      select: DAY_SELECT,
-    });
-  }
-
-  async findById(id: string) {
-    return this.db.day.findFirst({
-      where: { id },
-      select: DAY_SELECT,
-    });
-  }
-
-  async findManyByMonth({
-    clerkId,
-    startDate,
-    endDate,
-  }: {
-    clerkId: string;
-    startDate: Date;
-    endDate: Date;
-  }) {
-    return this.db.day.findMany({
+  // ─────────────────────────────────────────
+  // FIND MANY BY MONTH
+  // ─────────────────────────────────────────
+  async findManyByMonth({ clerkId, from, to }: FindManyDaysByMonthParams) {
+    return this.prisma.day.findMany({
       where: {
         clerkId,
-        date: { gte: startDate, lt: endDate },
+        date: {
+          gte: from,
+          lt: to,
+        },
       },
-
+      select: daySelect,
       orderBy: {
         date: "desc",
       },
+    });
+  }
 
-      select: DAY_SELECT,
+  // ─────────────────────────────────────────
+  // FIND BY ID
+  // ─────────────────────────────────────────
+  async findById({ id, clerkId }: FindDayByIdParams) {
+    return this.prisma.day.findFirst({
+      where: {
+        id,
+        clerkId,
+      },
+      select: daySelect,
+    });
+  }
+
+  // ─────────────────────────────────────────
+  // CREATE
+  // ─────────────────────────────────────────
+  async create({
+    clerkId,
+    date,
+    hours,
+    kilometers,
+  }: CreateDayRepositoryParams) {
+    return this.prisma.day.create({
+      data: {
+        clerkId,
+        date,
+        hours,
+        kilometers,
+        totalEarnings: 0,
+        totalExpenses: 0,
+        netProfit: 0,
+      },
+      select: daySelect,
+    });
+  }
+
+  // ─────────────────────────────────────────
+  // UPDATE
+  // ─────────────────────────────────────────
+  async update({
+    id,
+    clerkId,
+    data,
+  }: UpdateDayRepositoryParams): Promise<void> {
+    await this.prisma.day.updateMany({
+      where: {
+        id,
+        clerkId,
+      },
+      data,
+    });
+  }
+
+  // ─────────────────────────────────────────
+  // DELETE
+  // ─────────────────────────────────────────
+  async delete({ id, clerkId }: DeleteDayRepositoryParams): Promise<void> {
+    await this.prisma.day.deleteMany({
+      where: {
+        id,
+        clerkId,
+      },
+    });
+  }
+
+  // ─────────────────────────────────────────
+  // EXISTS BY DATE
+  // ─────────────────────────────────────────
+  async existsByDate({ clerkId, date }: { clerkId: string; date: Date }) {
+    const count = await this.prisma.day.count({
+      where: {
+        clerkId,
+        date,
+      },
+    });
+    return count > 0;
+  }
+
+  // ─────────────────────────────────────────
+  // UPDATE FINANCIAL TOTALS
+  // ─────────────────────────────────────────
+  async updateFinancialTotals({
+    id,
+    clerkId,
+    totalEarnings,
+    totalExpenses,
+    netProfit,
+  }: UpdateFinancialTotalsRepositoryParams): Promise<void> {
+    await this.prisma.day.updateMany({
+      where: {
+        id,
+        clerkId,
+      },
+      data: {
+        totalEarnings,
+        totalExpenses,
+        netProfit,
+      },
     });
   }
 }

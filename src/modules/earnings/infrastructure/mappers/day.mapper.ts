@@ -1,26 +1,29 @@
-import { Prisma } from "@/generated/prisma/client";
-import { Day } from "../../types/domain.types";
+import { databaseDateToDayDate } from "@/shared/lib/date/day-date";
+import { DayListItemDto, EarningItemDto } from "../../application/dtos";
+import {
+  PrismaDayPayload,
+  PrismaDayEarningPayload,
+} from "../select/day.select";
 
-type PrismaDayWithEarnings = Prisma.DayGetPayload<{
-  select: typeof import("../prisma/day.select").DAY_SELECT;
-}>;
+function toEarningDto(earning: PrismaDayEarningPayload): EarningItemDto {
+  return {
+    id: earning.id,
+    app: earning.app,
+    amount: Number(earning.amount),
+  };
+}
 
-export function toDomainDay(day: PrismaDayWithEarnings): Day {
+export function toDayDto(day: PrismaDayPayload): DayListItemDto {
   return {
     id: day.id,
-    clerkId: day.clerkId,
-    date: day.date,
+    date: databaseDateToDayDate(day.date),
     hours: day.hours,
     kilometers: Number(day.kilometers),
     totalEarnings: Number(day.totalEarnings),
     totalExpenses: Number(day.totalExpenses),
     netProfit: Number(day.netProfit),
-    createdAt: day.createdAt,
-    updatedAt: day.updatedAt,
-    earnings: day.earnings.map((earning) => ({
-      id: earning.id,
-      app: earning.app,
-      amount: Number(earning.amount),
-    })),
+    earnings: day.earnings.map(toEarningDto),
+    createdAt: day.createdAt.toISOString(),
+    updatedAt: day.updatedAt.toISOString(),
   };
 }
