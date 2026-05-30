@@ -1,5 +1,5 @@
 import { z } from "zod";
 
-export const idSchema = z.cuid({
+export const cuidSchema = z.cuid({
   message: "ID inválido.",
 });

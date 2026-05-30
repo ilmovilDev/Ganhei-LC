@@ -1,30 +1,34 @@
 import { PrismaClient } from "@/generated/prisma/client";
-import { AppError } from "@/lib/errors/app-error";
 import { prisma } from "@/lib/db/prisma";
-import { dayDateToDatabase } from "@/shared/lib/date/day-date";
-import { createDaySchema } from "../schemas/create-day.schema";
-import { syncDayFinancialState } from "../services/sync-day-financial-state.service";
-import { CreateDayInput } from "../../types";
-import { DayRepository } from "../../infrastructure/repositories/day.repository";
-import { toDayDto } from "../../infrastructure/mappers/day.mapper";
-import { DayListItemDto } from "../dtos";
-import { DayRepositoryContract } from "../../domain/contracts/day-repository.contract";
-import { APP_ERROR_CODES } from "@/lib/errors/app-error-code";
+import { AppError } from "@/lib/errors/app-error";
 import { ERROR_MESSAGES } from "@/shared/constants/error-messages";
+import { dayDateToDatabase } from "@/shared/lib/date/day-date";
+import { updateDaySchema } from "../schemas/update-day.schema";
+import { DayListItemDto } from "../dtos";
+import { syncDayFinancialState } from "../services/sync-day-financial-state.service";
+import { DayRepository } from "../../infrastructure/repositories/day.repository";
+import { DayRepositoryContract } from "../../domain/contracts/day-repository.contract";
+import { toDayDto } from "../../infrastructure/mappers/day.mapper";
+import { APP_ERROR_CODES } from "@/lib/errors/app-error-code";
+import { UpdateDayInput } from "../../types";
 
-interface CreateDayUseCaseRequest {
+interface UpdateDayUseCaseRequest {
   clerkId: string;
-  data: CreateDayInput;
+  dayId: string;
+  data: UpdateDayInput;
 }
 
-export class CreateDayUseCase {
+export class UpdateDayUseCase {
   constructor(private readonly db: PrismaClient = prisma) {}
 
   async execute({
     clerkId,
+    dayId,
     data,
-  }: Readonly<CreateDayUseCaseRequest>): Promise<DayListItemDto> {
-    // AUTH
+  }: Readonly<UpdateDayUseCaseRequest>): Promise<DayListItemDto> {
+    // ─────────────────────────────────────
+    // AUTH VALIDATION
+    // ─────────────────────────────────────
     if (!clerkId) {
       throw new AppError({
         code: APP_ERROR_CODES.UNAUTHORIZED,
@@ -34,62 +38,82 @@ export class CreateDayUseCase {
     }
 
     // ─────────────────────────────────────
-    // VALIDATION
+    // INPUT VALIDATION
     // ─────────────────────────────────────
-    const validatedData = createDaySchema.parse(data);
+    const validatedData = updateDaySchema.parse(data);
 
-    // ─────────────────────────────────────
-    // NORMALIZE DATE
-    // ─────────────────────────────────────
-    const databaseDate = dayDateToDatabase(validatedData.date);
-
-    // ─────────────────────────────────────
-    // TRANSACTION
-    // ─────────────────────────────────────
     return this.db.$transaction(async (tx) => {
       const repository: DayRepositoryContract = new DayRepository(tx);
 
       // ───────────────────────────────────
-      // DUPLICATE CHECK
+      // EXISTS VALIDATION
       // ───────────────────────────────────
-      const alreadyExists = await repository.existsByDate({
+      const existingDay = await repository.findById({
+        id: dayId,
         clerkId,
-        date: databaseDate,
       });
 
-      if (alreadyExists) {
+      if (!existingDay) {
         throw new AppError({
-          code: APP_ERROR_CODES.DAY_ALREADY_EXISTS,
-          message: ERROR_MESSAGES.DAY_ALREADY_EXISTS,
-          statusCode: 409,
+          code: APP_ERROR_CODES.DAY_NOT_FOUND,
+          message: ERROR_MESSAGES.DAY_NOT_FOUND,
+          statusCode: 404,
         });
       }
 
       // ───────────────────────────────────
-      // CREATE BASE DAY
+      // DUPLICATE DATE VALIDATION
       // ───────────────────────────────────
-      const createdDay = await repository.create({
+
+      if (validatedData.date) {
+        const normalizedDate = dayDateToDatabase(validatedData.date);
+
+        const duplicateDay = await repository.existsByDate({
+          clerkId,
+          date: normalizedDate,
+        });
+
+        const isChangingDate =
+          normalizedDate.getTime() !== existingDay.date.getTime();
+
+        if (duplicateDay && isChangingDate) {
+          throw new AppError({
+            code: APP_ERROR_CODES.DAY_ALREADY_EXISTS,
+            message: ERROR_MESSAGES.DAY_ALREADY_EXISTS,
+            statusCode: 409,
+          });
+        }
+      }
+
+      // ───────────────────────────────────
+      // UPDATE
+      // ───────────────────────────────────
+      await repository.update({
+        id: dayId,
         clerkId,
-        date: databaseDate,
-        hours: validatedData.hours,
-        kilometers: validatedData.kilometers,
+        data: {
+          hours: validatedData.hours,
+          kilometers: validatedData.kilometers,
+        },
       });
 
       // ───────────────────────────────────
-      // SYNC FINANCIAL STATE
+      // FINANCIAL RESYNC
       // ───────────────────────────────────
-      await syncDayFinancialState({
-        tx,
-        dayId: createdDay.id,
-        clerkId,
-        earnings: validatedData.earnings,
-      });
+      if (validatedData.earnings) {
+        await syncDayFinancialState({
+          tx,
+          dayId,
+          clerkId,
+          earnings: validatedData.earnings,
+        });
+      }
 
       // ───────────────────────────────────
-      // REFETCH HYDRATED AGGREGATE
+      // HYDRATE
       // ───────────────────────────────────
       const hydratedDay = await repository.findById({
-        id: createdDay.id,
+        id: dayId,
         clerkId,
       });
 
@@ -101,9 +125,6 @@ export class CreateDayUseCase {
         });
       }
 
-      // ───────────────────────────────────
-      // DTO
-      // ───────────────────────────────────
       return toDayDto(hydratedDay);
     });
   }

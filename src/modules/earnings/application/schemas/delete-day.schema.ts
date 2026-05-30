@@ -1,6 +1,6 @@
+import { cuidSchema } from "@/shared/schemas/common/cuid.schema";
 import { z } from "zod";
-import { idSchema } from "./primitives";
 
 export const deleteDaySchema = z.object({
-  id: idSchema,
+  id: cuidSchema,
 });

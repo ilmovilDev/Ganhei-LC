@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { App } from "@/generated/prisma/enums";
-import { moneySchema } from "./primitives/money.schema";
+import { moneySchema } from "@/shared/schemas/money/money.schema";
 
 export const earningAppSchema = z.nativeEnum(App, {
   message: "Aplicativo inválido.",

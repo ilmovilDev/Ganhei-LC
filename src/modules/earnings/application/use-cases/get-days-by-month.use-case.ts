@@ -1,6 +1,8 @@
 import { monthRangeUTC } from "@/shared/lib/date/month-range";
+import { DayRepositoryContract } from "../../domain/contracts/day-repository.contract";
 import { toDayDto } from "../../infrastructure/mappers/day.mapper";
-import { DayRepository } from "../../infrastructure/repositories/day.repository";
+import { DayListItemDto } from "../dtos";
+import { queryMonthSchema } from "@/shared/schemas/date";
 
 interface GetDaysByMonthUseCaseRequest {
   clerkId: string;
@@ -9,17 +11,41 @@ interface GetDaysByMonthUseCaseRequest {
 }
 
 export class GetDaysByMonthUseCase {
-  constructor(private readonly repository: DayRepository) {}
+  constructor(private readonly repository: DayRepositoryContract) {}
 
-  async execute({ clerkId, month, year }: GetDaysByMonthUseCaseRequest) {
-    const { from, to } = monthRangeUTC(year, month);
+  async execute({
+    clerkId,
+    month,
+    year,
+  }: Readonly<GetDaysByMonthUseCaseRequest>): Promise<DayListItemDto[]> {
+    // ─────────────────────────────────────
+    // VALIDATION
+    // ─────────────────────────────────────
+    const validatedQuery = queryMonthSchema.parse({
+      month,
+      year,
+    });
 
+    // ─────────────────────────────────────
+    // RANGE
+    // ─────────────────────────────────────
+    const { from, to } = monthRangeUTC(
+      validatedQuery.year,
+      validatedQuery.month,
+    );
+
+    // ─────────────────────────────────────
+    // QUERY
+    // ─────────────────────────────────────
     const days = await this.repository.findManyByMonth({
       clerkId,
       from,
       to,
     });
 
+    // ─────────────────────────────────────
+    // DTO MAPPING
+    // ─────────────────────────────────────
     return days.map(toDayDto);
   }
 }

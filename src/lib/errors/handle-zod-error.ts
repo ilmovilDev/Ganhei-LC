@@ -1,9 +1,13 @@
 import { ZodError } from "zod";
 
-export function handleZodError(error: ZodError) {
-  return error.issues.map((issue) => ({
-    path: issue.path.join("."),
+export interface ValidationFieldError {
+  field: string;
+  message: string;
+}
 
+export function handleZodError(error: ZodError): ValidationFieldError[] {
+  return error.issues.map((issue) => ({
+    field: issue.path.join("."),
     message: issue.message,
   }));
 }
